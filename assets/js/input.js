@@ -8,6 +8,9 @@ const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwTelvmwcTnXUKYx_CQ
 // =========================================================================
 
 document.addEventListener('DOMContentLoaded', function () {
+    let isSyncingEntries = false;
+    let lastToastTime = 0;
+    let toastTimeout = null;
     const form = document.getElementById('productionForm');
     const selectPenyadap = document.getElementById('nama_penyadap');
     const selectPetak = document.getElementById('petak');
@@ -86,7 +89,7 @@ document.addEventListener('DOMContentLoaded', function () {
     function loadFormOptions() {
         const supervised = getSupervisedPetaks();
         const activeWorkers = getPenyadapList()
-            .filter(p => p.status === 'Aktif' && (supervised.length === 0 || supervised.includes(p.petak)))
+            .filter(p => (p.status || 'Aktif') === 'Aktif' && (supervised.length === 0 || supervised.includes(p.petak)))
             .map(p => p.nama);
         const petakCodes = getPetakList()
             .filter(b => supervised.length === 0 || supervised.includes(b.kode))
@@ -109,7 +112,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 if (res.status === 'success') {
                     if (res.penyadap && res.penyadap.length) {
                         const cloudWorkers = res.penyadap
-                            .filter(p => p.status === 'Aktif' && (supervised.length === 0 || supervised.includes(p.petak)))
+                            .filter(p => (p.status || 'Aktif') === 'Aktif' && (supervised.length === 0 || supervised.includes(p.petak)))
                             .map(p => p.nama);
                         if (cloudWorkers.length > 0) workers = cloudWorkers;
                     }
@@ -312,6 +315,8 @@ document.addEventListener('DOMContentLoaded', function () {
         resetForm();
         if (!navigator.onLine) {
             showToast('📶 Tersimpan offline. Otomatis sinkron saat terhubung internet.');
+        } else {
+            showToast('✅ Laporan timbangan berhasil disimpan!');
         }
     }
 
@@ -326,6 +331,10 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function showToast(message, isError = false) {
+        if (toastTimeout) {
+            clearTimeout(toastTimeout);
+        }
+        lastToastTime = Date.now();
         toast.querySelector('span').textContent = message;
         if (isError) {
             toast.classList.add('error');
@@ -334,8 +343,9 @@ document.addEventListener('DOMContentLoaded', function () {
         }
         toast.style.display = 'flex';
 
-        setTimeout(() => {
+        toastTimeout = setTimeout(() => {
             toast.style.display = 'none';
+            toastTimeout = null;
         }, 3500);
     }
 
@@ -356,8 +366,6 @@ document.addEventListener('DOMContentLoaded', function () {
     window.addEventListener('online', updateOnlineStatus);
     window.addEventListener('offline', updateOnlineStatus);
     updateOnlineStatus(); // Initial call
-
-    let isSyncingEntries = false;
 
     function dequeueOfflineEntry() {
         try {
@@ -409,21 +417,30 @@ document.addEventListener('DOMContentLoaded', function () {
 
         promiseChain.then(() => {
             isSyncingEntries = false;
-            if (syncedCount > 0) {
-                showToast(`🔄 Berhasil sinkron ${syncedCount} data offline ke Google Sheets!`);
-            }
             loadFormOptions();
             if (window.parent && window.parent !== window) {
                 window.parent.postMessage({ type: 'SIPENA_SUBMIT_SUCCESS' }, '*');
             }
+            if (syncedCount > 0) {
+                const elapsed = Date.now() - lastToastTime;
+                const delay = Math.max(0, 1800 - elapsed);
+                setTimeout(() => {
+                    showToast(`🔄 Berhasil sinkron ${syncedCount} data offline ke Google Sheets!`);
+                }, delay);
+            }
         }).catch(err => {
             isSyncingEntries = false;
             console.error("Gagal sinkron entries offline:", err);
+            loadFormOptions();
+            if (window.parent && window.parent !== window) {
+                window.parent.postMessage({ type: 'SIPENA_SUBMIT_SUCCESS' }, '*');
+            }
             if (syncedCount > 0) {
-                showToast(`🔄 Sebagian tersinkron (${syncedCount} data).`);
-                if (window.parent && window.parent !== window) {
-                    window.parent.postMessage({ type: 'SIPENA_SUBMIT_SUCCESS' }, '*');
-                }
+                const elapsed = Date.now() - lastToastTime;
+                const delay = Math.max(0, 1800 - elapsed);
+                setTimeout(() => {
+                    showToast(`🔄 Sebagian tersinkron (${syncedCount} data).`);
+                }, delay);
             }
         });
     }

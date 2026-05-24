@@ -92,17 +92,19 @@ document.addEventListener('DOMContentLoaded', function () {
         promiseChain.then(() => {
             isSyncingOffline = false;
             if (syncedCount > 0) {
-                showToast(`🔄 Berhasil sinkron ${syncedCount} data offline ke Google Sheets!`, 'success');
-            }
-            setTimeout(() => {
+                const elapsed = Date.now() - lastToastTime;
+                const delay = Math.max(0, 1800 - elapsed);
+                setTimeout(() => {
+                    showToast(`🔄 Berhasil sinkron ${syncedCount} data offline ke Google Sheets!`, 'success');
+                    if (callback) callback();
+                }, delay);
+            } else {
                 if (callback) callback();
-            }, 3000);
+            }
         }).catch(err => {
             isSyncingOffline = false;
             console.error("Gagal sinkron aksi offline:", err);
-            setTimeout(() => {
-                if (callback) callback();
-            }, 3000);
+            if (callback) callback();
         });
     }
 
@@ -188,6 +190,11 @@ document.addEventListener('DOMContentLoaded', function () {
                             lsSet(LS.TARGET, res.targets);
                         }
                         if (res.monitoring && typeof res.monitoring === 'object' && Object.keys(res.monitoring).length) {
+                            Object.keys(res.monitoring).forEach(tgl => {
+                                if (res.monitoring[tgl] && typeof res.monitoring[tgl] === 'object') {
+                                    res.monitoring[tgl]._submitted = true;
+                                }
+                            });
                             lsSet(LS.MONITORING, res.monitoring);
                         }
                     }
@@ -254,7 +261,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function getFilteredActivePenyadap() {
-        return getFilteredPenyadapList().filter(p => p.status === 'Aktif');
+        return getFilteredPenyadapList().filter(p => (p.status || 'Aktif') === 'Aktif');
     }
 
     function getFilteredPetakList() {
@@ -264,10 +271,12 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // ======================== TOAST NOTIFICATION ========================
     let toastTimer = null;
+    let lastToastTime = 0;
     function showToast(msg, type = 'success') {
         const t = document.getElementById('globalToast');
         if (!t) return;
         clearTimeout(toastTimer);
+        lastToastTime = Date.now();
         t.textContent = msg;
         t.className = `global-toast ${type}`;
         t.style.display = 'block';
@@ -373,8 +382,10 @@ document.addEventListener('DOMContentLoaded', function () {
 
     menuItems.forEach(item => {
         item.addEventListener('click', function (e) {
-            e.preventDefault();
             const tab = this.getAttribute('data-tab');
+            if (!tab) return; // Allow normal link navigation for non-tab links
+
+            e.preventDefault();
             menuItems.forEach(li => li.classList.remove('active'));
             this.classList.add('active');
             tabContents.forEach(tc => tc.classList.remove('active'));
@@ -472,7 +483,7 @@ document.addEventListener('DOMContentLoaded', function () {
                         Luas: <strong>${p.luas ? p.luas + ' Ha' : '-'}</strong> | Target: <strong>${p.target ? p.target + ' kg/th' : '-'}</strong>
                     </div>
                 </td>
-                <td><span class="status-badge-${p.status === 'Aktif' ? 'aktif' : 'nonaktif'}">${p.status}</span></td>
+                <td><span class="status-badge-${(p.status || 'Aktif') === 'Aktif' ? 'aktif' : 'nonaktif'}">${p.status || 'Aktif'}</span></td>
                 <td style="text-align: center;">
                     <div class="action-btns" style="justify-content: center;">
                         <button class="btn btn-outline" style="padding: 6px 12px; font-size: 0.8rem;" onclick="window.editPenyadap('${p.id}')">✏️ Edit</button>
@@ -518,7 +529,7 @@ document.addEventListener('DOMContentLoaded', function () {
         const totalTarget = parseFloat(targetEntry.tahunan) || 0;
 
         const penyadapList = getPenyadapList();
-        const otherActive = penyadapList.filter(x => x.petak === petakKode && x.status === 'Aktif' && x.id !== currentPenyadapId);
+        const otherActive = penyadapList.filter(x => x.petak === petakKode && (x.status || 'Aktif') === 'Aktif' && x.id !== currentPenyadapId);
 
         // Calculate Trees
         const allocatedPohon = otherActive.reduce((sum, x) => sum + (parseInt(x.pohon) || 0), 0);
@@ -656,7 +667,7 @@ document.addEventListener('DOMContentLoaded', function () {
         let list = getPenyadapList();
 
         if (status === 'Aktif') {
-            const otherActivePenyadap = list.filter(x => x.petak === petak && x.status === 'Aktif' && x.id !== id);
+            const otherActivePenyadap = list.filter(x => x.petak === petak && (x.status || 'Aktif') === 'Aktif' && x.id !== id);
 
             // Validasi Pohon
             const currentAllocatedPohon = otherActivePenyadap.reduce((sum, x) => sum + (parseInt(x.pohon) || 0), 0);
@@ -730,7 +741,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         tbody.innerHTML = petakList.map(b => {
-            const workers = penyadapList.filter(p => p.petak === b.kode && p.status === 'Aktif');
+            const workers = penyadapList.filter(p => p.petak === b.kode && (p.status || 'Aktif') === 'Aktif');
             const workerNames = workers.map(w => w.nama).join(', ') || '<span style="color: var(--text-muted); font-style: italic;">Belum ada penyadap aktif</span>';
 
             const totalPohon = parseInt(b.pohon) || 0;
@@ -776,7 +787,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 periode2: 150
             };
 
-            const assignedActive = penyadapList.filter(p => p.petak === b.kode && p.status === 'Aktif');
+            const assignedActive = penyadapList.filter(p => p.petak === b.kode && (p.status || 'Aktif') === 'Aktif');
             const n = assignedActive.length;
             const perPenyadap = n > 0 ? (target.tahunan / n) : target.tahunan;
 
@@ -810,7 +821,7 @@ document.addEventListener('DOMContentLoaded', function () {
             periode2: 0
         };
 
-        const activeWorkers = getPenyadapList().filter(p => p.petak === petakKode && p.status === 'Aktif');
+        const activeWorkers = getPenyadapList().filter(p => p.petak === petakKode && (p.status || 'Aktif') === 'Aktif');
         document.getElementById('targetPetakKode').value = petakKode;
 
         // Show names and individual targets of assigned tappers
@@ -1005,6 +1016,7 @@ document.addEventListener('DOMContentLoaded', function () {
         const penyadapList = getFilteredActivePenyadap();
         const mon = getMonitoringData();
         const dayData = mon[tgl] || {};
+        const isSubmitted = !!dayData._submitted;
 
         if (!petakList.length) {
             container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text-muted);">Belum ada petak yang ditugaskan kepada Anda oleh pimpinan.</div>';
@@ -1037,8 +1049,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 const radios = statusOptions.map(s => {
                     const checked = status === s ? 'checked' : '';
                     const safeId = `mon_${tgl}_${p.nama.replace(/\s+/g, '_')}_${s.replace(/\s+/g, '_')}`;
-                    return `<input type="radio" class="mon-status-radio" name="mon_${tgl}_${p.nama.replace(/\s+/g, '_')}" value="${s}" id="${safeId}" ${checked} onchange="window.onMonStatusChange('${tgl}','${p.nama}',this.value)" style="margin-right: 4px; cursor:pointer;">
-                            <label class="mon-status-label" for="${safeId}" style="margin-right:12px; font-size:0.85rem; font-weight:500; cursor:pointer;">${s}</label>`;
+                    return `<input type="radio" class="mon-status-radio" name="mon_${tgl}_${p.nama.replace(/\s+/g, '_')}" value="${s}" id="${safeId}" ${checked} ${isSubmitted ? 'disabled' : `onchange="window.onMonStatusChange('${tgl}','${p.nama}',this.value)"`} style="margin-right: 4px; ${isSubmitted ? '' : 'cursor:pointer;'}">
+                            <label class="mon-status-label" for="${safeId}" style="margin-right:12px; font-size:0.85rem; font-weight:500; ${isSubmitted ? '' : 'cursor:pointer;'}">${s}</label>`;
                 }).join('');
 
                 const showKet = (status !== 'Hadir') ? 'block' : 'none';
@@ -1049,7 +1061,7 @@ document.addEventListener('DOMContentLoaded', function () {
                         <div class="mon-penyadap-name" style="font-weight:700; color:var(--text-dark); font-size:0.95rem;">👤 ${p.nama}</div>
                         <div class="mon-status-select-group" style="display:flex; align-items:center; flex-wrap:wrap;">${radios}</div>
                     </div>
-                    <input type="text" class="form-control mon-keterangan-input" id="monket_${tgl}_${p.nama.replace(/\s+/g, '_')}" placeholder="Tulis alasan jika tidak hadir (sakit, hajatan, dll)..." value="${ket}" oninput="window.onMonKetChange('${tgl}','${p.nama}',this.value)" style="display:${showKet}; font-size:0.85rem; padding:6px 12px; width:100%;">
+                    <input type="text" class="form-control mon-keterangan-input" id="monket_${tgl}_${p.nama.replace(/\s+/g, '_')}" placeholder="Tulis alasan jika tidak hadir (sakit, hajatan, dll)..." value="${ket}" ${isSubmitted ? 'disabled' : `oninput="window.onMonKetChange('${tgl}','${p.nama}',this.value)"`} style="display:${showKet}; font-size:0.85rem; padding:6px 12px; width:100%;">
                 </div>`;
             });
 
@@ -1063,6 +1075,28 @@ document.addEventListener('DOMContentLoaded', function () {
 
         container.innerHTML = html;
         updateMonitoringCounts();
+
+        // Update state of Simpan Status button based on submission
+        const btnSimpan = document.getElementById('btnSimpanMonitoring');
+        if (btnSimpan) {
+            btnSimpan.disabled = isSubmitted;
+            if (isSubmitted) {
+                btnSimpan.innerHTML = '🔒 Sudah Diabsen';
+                btnSimpan.style.opacity = '0.6';
+                btnSimpan.style.cursor = 'not-allowed';
+            } else {
+                btnSimpan.innerHTML = `
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                        <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                        <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                        <polyline points="7 3 7 8 15 8"></polyline>
+                    </svg>
+                    Simpan Status
+                `;
+                btnSimpan.style.opacity = '1';
+                btnSimpan.style.cursor = 'pointer';
+            }
+        }
     }
 
     window.onMonStatusChange = function (tgl, nama, status) {
@@ -1104,9 +1138,18 @@ document.addEventListener('DOMContentLoaded', function () {
                 mon[tgl][p.nama] = { status: 'Hadir', keterangan: '' };
             }
         });
+
+        // Tandai sebagai telah dikirim/dikunci secara lokal
+        mon[tgl]._submitted = true;
         lsSet(LS.MONITORING, mon);
 
-        const dayData = mon[tgl];
+        // Salin data bersih tanpa flag internal _submitted untuk disinkronkan ke cloud
+        const dayData = {};
+        Object.keys(mon[tgl]).forEach(nama => {
+            if (nama !== '_submitted') {
+                dayData[nama] = mon[tgl][nama];
+            }
+        });
 
         showToast(`Data absensi tanggal ${tgl} disimpan secara lokal!`, 'success');
         updateMonitoringCounts();

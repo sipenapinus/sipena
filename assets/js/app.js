@@ -118,7 +118,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Penyadap aktif saja
     function getActivePenyadap() {
-        return getPenyadapList().filter(p => p.status === 'Aktif');
+        return getPenyadapList().filter(p => (p.status || 'Aktif') === 'Aktif');
     }
 
     // ======================== HELPER: DATE & FORMAT ========================
@@ -233,7 +233,7 @@ document.addEventListener('DOMContentLoaded', function () {
     // ======================== 2. DATA ENGINE ========================
     function getInitialMockData() {
         const mockData = [];
-        const penyadapList = getPenyadapList().filter(p => p.status === 'Aktif');
+        const penyadapList = getPenyadapList().filter(p => (p.status || 'Aktif') === 'Aktif');
         const workerMap    = {};
         penyadapList.forEach(p => { workerMap[p.nama] = p.petak; });
 
@@ -961,7 +961,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     </div>
                 </td>
                 <td><code style="background:#edf2f7;padding:3px 7px;border-radius:4px;">${p.petak}</code></td>
-                <td><span class="status-badge-${p.status === 'Aktif' ? 'aktif' : 'nonaktif'}">${p.status}</span></td>
+                <td><span class="status-badge-${(p.status || 'Aktif') === 'Aktif' ? 'aktif' : 'nonaktif'}">${p.status || 'Aktif'}</span></td>
                 <td>
                     <button class="btn-icon" title="Hapus" onclick="deletePenyadap('${p.id}')">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14H6L5 6"></path></svg>
@@ -1000,7 +1000,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }
         const penyadapList = getPenyadapList();
         tbody.innerHTML = targets.map(t => {
-            const assigned = penyadapList.filter(p => p.petak === t.petak && p.status === 'Aktif');
+            const assigned = penyadapList.filter(p => p.petak === t.petak && (p.status || 'Aktif') === 'Aktif');
             const perPenyadap = assigned.length > 0 ? (parseFloat(t.tahunan) / assigned.length).toFixed(0) : t.tahunan;
             return `<tr>
                 <td><code style="background:#edf2f7;padding:3px 7px;border-radius:4px;">${t.petak}</code></td>
@@ -1240,7 +1240,7 @@ document.addEventListener('DOMContentLoaded', function () {
         const thisYear = new Date().getFullYear();
 
         tbody.innerHTML = petakList.map(b => {
-            const assigned = penyadapList.filter(p => p.petak === b.kode && p.status === 'Aktif');
+            const assigned = penyadapList.filter(p => p.petak === b.kode && (p.status || 'Aktif') === 'Aktif');
             
             // Calculate trees digarap vs total
             const treesDigarap = assigned.reduce((sum, p) => sum + (parseInt(p.pohon) || 0), 0);
@@ -1383,6 +1383,10 @@ document.addEventListener('DOMContentLoaded', function () {
     function renderMonitoringTab() {
         const dateEl = document.getElementById('monitoringDate');
         if (dateEl && !dateEl.value) dateEl.value = todayStr();
+        
+        const btnSimpanMon = document.getElementById('btnSimpanMonitoring');
+        if (btnSimpanMon) btnSimpanMon.style.display = 'none';
+
         updateMonitoringCounts();
     }
 
@@ -1436,8 +1440,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 const radios = statusOptions.map(s => {
                     const checked = status === s ? 'checked' : '';
                     const safeId  = `mon_${tgl}_${p.nama.replace(/\s+/g, '_')}_${s.replace(/\s+/g, '_')}`;
-                    return `<input type="radio" class="mon-status-radio" name="mon_${tgl}_${p.nama.replace(/\s+/g,'_')}" value="${s}" id="${safeId}" ${checked} onchange="onMonStatusChange('${tgl}','${p.nama}',this.value)">
-                            <label class="mon-status-label" for="${safeId}">${s}</label>`;
+                    return `<input type="radio" class="mon-status-radio" name="mon_${tgl}_${p.nama.replace(/\s+/g,'_')}" value="${s}" id="${safeId}" ${checked} disabled style="margin-right: 4px;">
+                            <label class="mon-status-label" for="${safeId}" style="margin-right: 12px; font-size: 0.85rem; font-weight: 500;">${s}</label>`;
                 }).join('');
 
                 const showKet = (status !== 'Hadir') ? 'visible' : '';
@@ -1446,7 +1450,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 html += `<div class="monitoring-penyadap-row ${rowClass}" id="monrow_${tgl}_${p.nama.replace(/\s+/g,'_')}">
                     <div class="mon-penyadap-name">👤 ${p.nama}</div>
                     <div class="mon-status-select-group">${radios}</div>
-                    <input type="text" class="mon-keterangan-input ${showKet}" id="monket_${tgl}_${p.nama.replace(/\s+/g,'_')}" placeholder="Keterangan..." value="${ket}" oninput="onMonKetChange('${tgl}','${p.nama}',this.value)">
+                    <input type="text" class="mon-keterangan-input ${showKet}" id="monket_${tgl}_${p.nama.replace(/\s+/g,'_')}" placeholder="Keterangan..." value="${ket}" disabled style="font-size: 0.85rem; padding: 6px 12px; width: 100%;">
                 </div>`;
             });
 

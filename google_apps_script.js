@@ -46,9 +46,23 @@ function doGet(e) {
     monitoring.forEach(function(row) {
       var tgl = "";
       if (row.tanggal instanceof Date) {
-        tgl = row.tanggal.toISOString().split("T")[0];
+        tgl = Utilities.formatDate(row.tanggal, ss.getSpreadsheetTimeZone(), "yyyy-MM-dd");
       } else {
-        tgl = String(row.tanggal).split(" ")[0];
+        var str = String(row.tanggal).trim();
+        if (/^\d{4}-\d{2}-\d{2}/.test(str)) {
+          tgl = str.split(" ")[0];
+        } else {
+          try {
+            var d = new Date(str);
+            if (!isNaN(d.getTime())) {
+              tgl = Utilities.formatDate(d, ss.getSpreadsheetTimeZone(), "yyyy-MM-dd");
+            } else {
+              tgl = str.split(" ")[0];
+            }
+          } catch(e) {
+            tgl = str.split(" ")[0];
+          }
+        }
       }
       if (!monMap[tgl]) monMap[tgl] = {};
       monMap[tgl][row.nama_penyadap] = { status: row.status, keterangan: row.keterangan };
@@ -80,6 +94,12 @@ function doPost(e) {
     if (!sheet) {
       sheet = ss.insertSheet(name);
       sheet.appendRow(headers);
+    } else {
+      var lastCol = sheet.getLastColumn();
+      var existingHeaders = lastCol > 0 ? sheet.getRange(1, 1, 1, lastCol).getValues()[0] : [];
+      if (existingHeaders.length < headers.length) {
+        sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+      }
     }
     return sheet;
   }
@@ -109,7 +129,7 @@ function doPost(e) {
     // 2. CRUD Penyadap
     if (action === "savePenyadap") {
       var item = postData.data;
-      var sheet = getOrCreateSheet("Penyadap", ["id", "nama", "petak", "status", "pohon"]);
+      var sheet = getOrCreateSheet("Penyadap", ["id", "nama", "petak", "status", "pohon", "luas", "target", "periode1", "periode2"]);
       var rows = sheet.getDataRange().getValues();
       var foundIdx = -1;
       for (var i = 1; i < rows.length; i++) {
@@ -120,7 +140,16 @@ function doPost(e) {
       }
       if (foundIdx > 0) {
         var oldNama = rows[foundIdx - 1][1];
-        sheet.getRange(foundIdx, 2, 1, 4).setValues([[item.nama, item.petak, item.status, item.pohon]]);
+        sheet.getRange(foundIdx, 2, 1, 8).setValues([[
+          item.nama,
+          item.petak,
+          item.status,
+          item.pohon,
+          item.luas || 0,
+          item.target || 0,
+          item.periode1 || 0,
+          item.periode2 || 0
+        ]]);
         
         // Integritas: Update nama penyadap di sheet Absensi jika berubah
         if (oldNama !== item.nama) {
@@ -135,14 +164,24 @@ function doPost(e) {
           }
         }
       } else {
-        sheet.appendRow([item.id, item.nama, item.petak, item.status, item.pohon]);
+        sheet.appendRow([
+          item.id,
+          item.nama,
+          item.petak,
+          item.status,
+          item.pohon,
+          item.luas || 0,
+          item.target || 0,
+          item.periode1 || 0,
+          item.periode2 || 0
+        ]);
       }
       return ContentService.createTextOutput(JSON.stringify({ status: "success" }))
         .setMimeType(ContentService.MimeType.JSON);
     }
     
     if (action === "deletePenyadap") {
-      var sheet = getOrCreateSheet("Penyadap", ["id", "nama", "petak", "status", "pohon"]);
+      var sheet = getOrCreateSheet("Penyadap", ["id", "nama", "petak", "status", "pohon", "luas", "target", "periode1", "periode2"]);
       var rows = sheet.getDataRange().getValues();
       for (var i = 1; i < rows.length; i++) {
         if (String(rows[i][0]) === String(postData.id)) {
