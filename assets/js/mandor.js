@@ -208,32 +208,41 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Default lists matching main app
     function getMandorList() {
-        return lsGet(LS.MANDOR) || [
-            { id: 'm1', nama: 'Mandor Wawan', nik: '001', petak: ['P.01 - B.01', 'P.03 - B.12'] },
-            { id: 'm2', nama: 'Mandor Budi', nik: '002', petak: ['P.02 - B.05', 'P.04 - B.08'] },
-            { id: 'm3', nama: 'Mandor Kardi', nik: '003', petak: ['P.05 - B.03', 'P.06 - B.10'] },
+        const cached = lsGet(LS.MANDOR);
+        if (WEB_APP_URL) return cached || [];
+        
+        return cached || [
+            { id: 'm1', nama: 'Mandor Wawan', nik: '001', petak: ['P.01', 'P.03'] },
+            { id: 'm2', nama: 'Mandor Budi',  nik: '002', petak: ['P.02', 'P.04'] },
+            { id: 'm3', nama: 'Mandor Kardi', nik: '003', petak: ['P.05', 'P.06'] },
         ];
     }
 
     function getPenyadapList() {
-        return lsGet(LS.PENYADAP) || [
-            { id: 'p1', nama: 'Slamet', petak: 'P.01 - B.01', status: 'Aktif', pohon: 800 },
-            { id: 'p2', nama: 'Budi', petak: 'P.02 - B.05', status: 'Aktif', pohon: 1000 },
-            { id: 'p3', nama: 'Sukijo', petak: 'P.03 - B.12', status: 'Aktif', pohon: 700 },
-            { id: 'p4', nama: 'Tukimin', petak: 'P.04 - B.08', status: 'Aktif', pohon: 900 },
-            { id: 'p5', nama: 'Wawan', petak: 'P.05 - B.03', status: 'Aktif', pohon: 800 },
-            { id: 'p6', nama: 'Kardi', petak: 'P.06 - B.10', status: 'Aktif', pohon: 950 },
+        const cached = lsGet(LS.PENYADAP);
+        if (WEB_APP_URL) return cached || [];
+
+        return cached || [
+            { id: 'p1', nama: 'Slamet',  petak: 'P.01', status: 'Aktif', pohon: 800 },
+            { id: 'p2', nama: 'Budi',    petak: 'P.02', status: 'Aktif', pohon: 1000 },
+            { id: 'p3', nama: 'Sukijo',  petak: 'P.03', status: 'Aktif', pohon: 700 },
+            { id: 'p4', nama: 'Tukimin', petak: 'P.04', status: 'Aktif', pohon: 900 },
+            { id: 'p5', nama: 'Wawan',   petak: 'P.05', status: 'Aktif', pohon: 800 },
+            { id: 'p6', nama: 'Kardi',   petak: 'P.06', status: 'Aktif', pohon: 950 },
         ];
     }
 
     function getPetakList() {
-        return lsGet(LS.PETAK) || [
-            { id: 'b1', kode: 'P.01 - B.01', luas: 12.5, pohon: 1200 },
-            { id: 'b2', kode: 'P.02 - B.05', luas: 15.0, pohon: 1500 },
-            { id: 'b3', kode: 'P.03 - B.12', luas: 10.0, pohon: 1000 },
-            { id: 'b4', kode: 'P.04 - B.08', luas: 13.0, pohon: 1300 },
-            { id: 'b5', kode: 'P.05 - B.03', luas: 11.5, pohon: 1100 },
-            { id: 'b6', kode: 'P.06 - B.10', luas: 14.0, pohon: 1400 },
+        const cached = lsGet(LS.PETAK);
+        if (WEB_APP_URL) return cached || [];
+
+        return cached || [
+            { id: 'b1', kode: 'P.01', luas: 12.5, pohon: 1200 },
+            { id: 'b2', kode: 'P.02', luas: 15.0, pohon: 1500 },
+            { id: 'b3', kode: 'P.03', luas: 10.0, pohon: 1000 },
+            { id: 'b4', kode: 'P.04', luas: 13.0, pohon: 1300 },
+            { id: 'b5', kode: 'P.05', luas: 11.5, pohon: 1100 },
+            { id: 'b6', kode: 'P.06', luas: 14.0, pohon: 1400 },
         ];
     }
 

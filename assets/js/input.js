@@ -48,14 +48,18 @@ document.addEventListener('DOMContentLoaded', function () {
             const list = JSON.parse(localStorage.getItem('sipena_penyadap'));
             if (list && list.length) return list;
         } catch(e) {}
-        return [
-            { id: 'p1', nama: 'Slamet',  petak: 'P.01 - B.01', status: 'Aktif', pohon: 800 },
-            { id: 'p2', nama: 'Budi',    petak: 'P.02 - B.05', status: 'Aktif', pohon: 1000 },
-            { id: 'p3', nama: 'Sukijo',  petak: 'P.03 - B.12', status: 'Aktif', pohon: 700 },
-            { id: 'p4', nama: 'Tukimin', petak: 'P.04 - B.08', status: 'Aktif', pohon: 900 },
-            { id: 'p5', nama: 'Wawan',   petak: 'P.05 - B.03', status: 'Aktif', pohon: 800 },
-            { id: 'p6', nama: 'Kardi',   petak: 'P.06 - B.10', status: 'Aktif', pohon: 950 },
-        ];
+        
+        if (!WEB_APP_URL) {
+            return [
+                { id: 'p1', nama: 'Slamet',  petak: 'P.01', status: 'Aktif', pohon: 800 },
+                { id: 'p2', nama: 'Budi',    petak: 'P.02', status: 'Aktif', pohon: 1000 },
+                { id: 'p3', nama: 'Sukijo',  petak: 'P.03', status: 'Aktif', pohon: 700 },
+                { id: 'p4', nama: 'Tukimin', petak: 'P.04', status: 'Aktif', pohon: 900 },
+                { id: 'p5', nama: 'Wawan',   petak: 'P.05', status: 'Aktif', pohon: 800 },
+                { id: 'p6', nama: 'Kardi',   petak: 'P.06', status: 'Aktif', pohon: 950 },
+            ];
+        }
+        return [];
     }
 
     // Helper to load Petak list
@@ -64,14 +68,18 @@ document.addEventListener('DOMContentLoaded', function () {
             const list = JSON.parse(localStorage.getItem('sipena_petak'));
             if (list && list.length) return list;
         } catch(e) {}
-        return [
-            { id: 'b1', kode: 'P.01 - B.01', luas: 12.5, pohon: 1200 },
-            { id: 'b2', kode: 'P.02 - B.05', luas: 15.0, pohon: 1500 },
-            { id: 'b3', kode: 'P.03 - B.12', luas: 10.0, pohon: 1000 },
-            { id: 'b4', kode: 'P.04 - B.08', luas: 13.0, pohon: 1300 },
-            { id: 'b5', kode: 'P.05 - B.03', luas: 11.5, pohon: 1100 },
-            { id: 'b6', kode: 'P.06 - B.10', luas: 14.0, pohon: 1400 },
-        ];
+        
+        if (!WEB_APP_URL) {
+            return [
+                { id: 'b1', kode: 'P.01', luas: 12.5, pohon: 1200 },
+                { id: 'b2', kode: 'P.02', luas: 15.0, pohon: 1500 },
+                { id: 'b3', kode: 'P.03', luas: 10.0, pohon: 1000 },
+                { id: 'b4', kode: 'P.04', luas: 13.0, pohon: 1300 },
+                { id: 'b5', kode: 'P.05', luas: 11.5, pohon: 1100 },
+                { id: 'b6', kode: 'P.06', luas: 14.0, pohon: 1400 },
+            ];
+        }
+        return [];
     }
 
     function getSupervisedPetaks() {

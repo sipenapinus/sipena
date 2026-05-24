@@ -389,12 +389,27 @@
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                     <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
                                 </svg>
-                                Rekapitulasi Produksi vs Target Tahunan (per Mandor)
+                                Progress Target Tahunan per Petak
+                            </div>
+                        </div>
+                        <div class="chart-container"><canvas id="chartTargetPetak"></canvas></div>
+                    </div>
+                    <div class="card-chart">
+                        <div class="chart-header">
+                            <div class="chart-title">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                                    <circle cx="9" cy="7" r="4"></circle>
+                                </svg>
+                                Capaian Target Tahunan per Penyadap
                             </div>
                         </div>
                         <div class="chart-container"><canvas id="chartTargetTahunan"></canvas></div>
                     </div>
-                    <div class="card-chart">
+                </div>
+
+                <div class="charts-grid-row1" style="margin-top: 24px;">
+                    <div class="card-chart" style="grid-column: span 2;">
                         <div class="chart-header">
                             <div class="chart-title">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -403,10 +418,10 @@
                                     <line x1="8" y1="2" x2="8" y2="6"></line>
                                     <line x1="3" y1="10" x2="21" y2="10"></line>
                                 </svg>
-                                Target Bulanan Bulan Ini
+                                Progress Bulanan: Periode 1 vs Periode 2 (Aktual vs Target)
                             </div>
                         </div>
-                        <div class="chart-container"><canvas id="chartTargetBulanan"></canvas></div>
+                        <div class="chart-container" style="height: 350px;"><canvas id="chartTargetBulanan"></canvas></div>
                     </div>
                 </div>
 
@@ -670,22 +685,22 @@
                                 <path d="M 0 80 Q 120 180 200 130 T 350 250 T 500 230" class="map-river"></path>
                                 <path d="M 100 0 L 100 400 M 0 300 L 500 300" class="map-road"></path>
                                 <polygon points="30,30 90,30 90,120 30,120" class="map-block" id="block-P01"
-                                    data-block-id="P.01 - B.01"></polygon>
+                                    data-block-id="P.01"></polygon>
                                 <text x="60" y="80" class="map-text">P.01</text>
                                 <polygon points="120,40 220,40 220,100 150,150 120,120" class="map-block" id="block-P02"
-                                    data-block-id="P.02 - B.05"></polygon>
+                                    data-block-id="P.02"></polygon>
                                 <text x="170" y="85" class="map-text">P.02</text>
                                 <polygon points="260,30 380,30 350,140 260,110" class="map-block" id="block-P03"
-                                    data-block-id="P.03 - B.12"></polygon>
+                                    data-block-id="P.03"></polygon>
                                 <text x="310" y="80" class="map-text">P.03</text>
                                 <polygon points="30,160 90,160 90,260 30,260" class="map-block" id="block-P04"
-                                    data-block-id="P.04 - B.08"></polygon>
+                                    data-block-id="P.04"></polygon>
                                 <text x="60" y="210" class="map-text">P.04</text>
                                 <polygon points="230,170 330,170 360,260 260,280" class="map-block" id="block-P05"
-                                    data-block-id="P.05 - B.03"></polygon>
+                                    data-block-id="P.05"></polygon>
                                 <text x="290" y="225" class="map-text">P.05</text>
                                 <polygon points="390,170 470,170 470,280 390,280" class="map-block" id="block-P06"
-                                    data-block-id="P.06 - B.10"></polygon>
+                                    data-block-id="P.06"></polygon>
                                 <text x="430" y="230" class="map-text">P.06</text>
                             </svg>
                         </div>

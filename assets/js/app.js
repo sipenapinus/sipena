@@ -7,6 +7,13 @@ const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwTelvmwcTnXUKYx_CQ
 
 document.addEventListener('DOMContentLoaded', function () {
 
+    // Color constants for charts
+    const G  = '#1b4332'; // Dark green
+    const GA = '#40916c'; // Actual green
+    const GL = '#52b788'; // Light green
+    const Y  = '#f4a261'; // Orange/Yellow
+    const R  = '#e76f51'; // Red
+
     // ======================== STATE MANAGEMENT ========================
     // Kunci localStorage
     const LS = {
@@ -39,12 +46,12 @@ document.addEventListener('DOMContentLoaded', function () {
         if (petakList && Array.isArray(petakList)) {
             let updated = false;
             const defaults = {
-                'P.01 - B.01': 1200,
-                'P.02 - B.05': 1500,
-                'P.03 - B.12': 1000,
-                'P.04 - B.08': 1300,
-                'P.05 - B.03': 1100,
-                'P.06 - B.10': 1400
+                'P.01': 1200,
+                'P.02': 1500,
+                'P.03': 1000,
+                'P.04': 1300,
+                'P.05': 1100,
+                'P.06': 1400
             };
             petakList = petakList.map(b => {
                 if (b.pohon === undefined || b.pohon === null || parseInt(b.pohon) <= 0) {
@@ -84,32 +91,42 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function getMandorList() {
-        return lsGet(LS.MANDOR) || [
-            { id: 'm1', nama: 'Mandor Wawan', nik: '001', petak: ['P.01 - B.01', 'P.03 - B.12'] },
-            { id: 'm2', nama: 'Mandor Budi',  nik: '002', petak: ['P.02 - B.05', 'P.04 - B.08'] },
-            { id: 'm3', nama: 'Mandor Kardi', nik: '003', petak: ['P.05 - B.03', 'P.06 - B.10'] },
+        const cached = lsGet(LS.MANDOR);
+        // Jika ada URL Cloud, JANGAN gunakan data demo hardcoded jika cache kosong
+        if (WEB_APP_URL) return cached || [];
+        
+        return cached || [
+            { id: 'm1', nama: 'Mandor Wawan', nik: '001', petak: ['P.01', 'P.03'] },
+            { id: 'm2', nama: 'Mandor Budi',  nik: '002', petak: ['P.02', 'P.04'] },
+            { id: 'm3', nama: 'Mandor Kardi', nik: '003', petak: ['P.05', 'P.06'] },
         ];
     }
 
     function getPenyadapList() {
-        return lsGet(LS.PENYADAP) || [
-            { id: 'p1', nama: 'Slamet',  petak: 'P.01 - B.01', status: 'Aktif', pohon: 800 },
-            { id: 'p2', nama: 'Budi',    petak: 'P.02 - B.05', status: 'Aktif', pohon: 1000 },
-            { id: 'p3', nama: 'Sukijo',  petak: 'P.03 - B.12', status: 'Aktif', pohon: 700 },
-            { id: 'p4', nama: 'Tukimin', petak: 'P.04 - B.08', status: 'Aktif', pohon: 900 },
-            { id: 'p5', nama: 'Wawan',   petak: 'P.05 - B.03', status: 'Aktif', pohon: 800 },
-            { id: 'p6', nama: 'Kardi',   petak: 'P.06 - B.10', status: 'Aktif', pohon: 950 },
+        const cached = lsGet(LS.PENYADAP);
+        if (WEB_APP_URL) return cached || [];
+
+        return cached || [
+            { id: 'p1', nama: 'Slamet',  petak: 'P.01', status: 'Aktif', pohon: 800 },
+            { id: 'p2', nama: 'Budi',    petak: 'P.02', status: 'Aktif', pohon: 1000 },
+            { id: 'p3', nama: 'Sukijo',  petak: 'P.03', status: 'Aktif', pohon: 700 },
+            { id: 'p4', nama: 'Tukimin', petak: 'P.04', status: 'Aktif', pohon: 900 },
+            { id: 'p5', nama: 'Wawan',   petak: 'P.05', status: 'Aktif', pohon: 800 },
+            { id: 'p6', nama: 'Kardi',   petak: 'P.06', status: 'Aktif', pohon: 950 },
         ];
     }
 
     function getPetakList() {
-        return lsGet(LS.PETAK) || [
-            { id: 'b1', kode: 'P.01 - B.01', luas: 12.5, pohon: 1200 },
-            { id: 'b2', kode: 'P.02 - B.05', luas: 15.0, pohon: 1500 },
-            { id: 'b3', kode: 'P.03 - B.12', luas: 10.0, pohon: 1000 },
-            { id: 'b4', kode: 'P.04 - B.08', luas: 13.0, pohon: 1300 },
-            { id: 'b5', kode: 'P.05 - B.03', luas: 11.5, pohon: 1100 },
-            { id: 'b6', kode: 'P.06 - B.10', luas: 14.0, pohon: 1400 },
+        const cached = lsGet(LS.PETAK);
+        if (WEB_APP_URL) return cached || [];
+
+        return cached || [
+            { id: 'b1', kode: 'P.01', luas: 12.5, pohon: 1200 },
+            { id: 'b2', kode: 'P.02', luas: 15.0, pohon: 1500 },
+            { id: 'b3', kode: 'P.03', luas: 10.0, pohon: 1000 },
+            { id: 'b4', kode: 'P.04', luas: 13.0, pohon: 1300 },
+            { id: 'b5', kode: 'P.05', luas: 11.5, pohon: 1100 },
+            { id: 'b6', kode: 'P.06', luas: 14.0, pohon: 1400 },
         ];
     }
 
@@ -292,9 +309,16 @@ document.addEventListener('DOMContentLoaded', function () {
         const cloudBanner = document.getElementById('cloudConnectionBanner');
         const demoBanner  = document.getElementById('demoModeBanner');
 
+        // Reset banners
+        if (cloudBanner) {
+            cloudBanner.style.display = 'none';
+            cloudBanner.style.backgroundColor = '#e8f5e9'; // Default green
+            cloudBanner.querySelector('span:last-child').textContent = 'Menghubungkan ke Google Sheets Cloud...';
+        }
+        if (demoBanner) demoBanner.style.display = 'none';
+
         if (!WEB_APP_URL) {
-            if (demoBanner)  demoBanner.style.display  = 'flex';
-            if (cloudBanner) cloudBanner.style.display = 'none';
+            if (demoBanner) demoBanner.style.display = 'flex';
             let data = lsGet(LS.DEMO_DATA);
             if (!data || !data.length) {
                 data = getInitialMockData();
@@ -306,12 +330,23 @@ document.addEventListener('DOMContentLoaded', function () {
             return;
         }
 
-        if (demoBanner)  demoBanner.style.display  = 'none';
         if (cloudBanner) cloudBanner.style.display = 'flex';
 
-        const fallback = () => {
+        const fallback = (errorMsg = null) => {
+            console.warn("Menggunakan data cache atau mock karena gagal fetch:", errorMsg);
+            if (cloudBanner) {
+                cloudBanner.style.backgroundColor = '#ffebee';
+                cloudBanner.style.borderColor = '#ffcdd2';
+                cloudBanner.style.color = '#c62828';
+                cloudBanner.querySelector('span:first-child').style.backgroundColor = '#c62828';
+                cloudBanner.querySelector('span:last-child').textContent = errorMsg || 'Gagal terhubung ke Cloud. Menggunakan data terakhir.';
+            }
+            
             let cached = lsGet(LS.CLOUD_CACHE);
-            if (!cached || !cached.length) cached = getInitialMockData();
+            if (!cached || !cached.length) {
+                // Jika tidak ada cache sama sekali, baru gunakan mock tapi beri peringatan
+                cached = getInitialMockData();
+            }
             cached.sort((a, b) => new Date(b.tanggal) - new Date(a.tanggal));
             globalRecords = cached;
             callback(cached);
@@ -319,43 +354,71 @@ document.addEventListener('DOMContentLoaded', function () {
 
         if (navigator.onLine) {
             fetch(WEB_APP_URL)
-                .then(r => r.json())
+                .then(r => {
+                    if (!r.ok) throw new Error(`HTTP error! status: ${r.status}`);
+                    return r.json();
+                })
                 .then(res => {
-                    if (res.status === 'success' && res.data) {
+                    if (res.status === 'success') {
+                        if (cloudBanner) {
+                            cloudBanner.style.backgroundColor = '#e8f5e9';
+                            cloudBanner.style.color = '#2e7d32';
+                            cloudBanner.querySelector('span:last-child').textContent = 'Database Terhubung ke Google Sheets Cloud';
+                        }
+
                         // Sync Metadata tables if present
-                        if (res.penyadap && Array.isArray(res.penyadap) && res.penyadap.length) {
+                        if (res.penyadap && Array.isArray(res.penyadap)) {
                             lsSet(LS.PENYADAP, res.penyadap);
                         }
-                        if (res.petak && Array.isArray(res.petak) && res.petak.length) {
+                        if (res.petak && Array.isArray(res.petak)) {
                             lsSet(LS.PETAK, res.petak);
                         }
-                        if (res.mandor && Array.isArray(res.mandor) && res.mandor.length) {
+                        if (res.mandor && Array.isArray(res.mandor)) {
                             lsSet(LS.MANDOR, res.mandor);
                         }
-                        if (res.targets && Array.isArray(res.targets) && res.targets.length) {
+                        if (res.targets && Array.isArray(res.targets)) {
                             lsSet(LS.TARGET, res.targets);
                         }
-                        if (res.monitoring && typeof res.monitoring === 'object' && Object.keys(res.monitoring).length) {
+                        if (res.monitoring && typeof res.monitoring === 'object') {
                             lsSet(LS.MONITORING, res.monitoring);
                         }
 
-                        const fmt = res.data.map(r => ({
-                            id: r.id || 'c-' + Math.random().toString(36).substr(2,9),
-                            tanggal: r.tanggal || '',
-                            nama_penyadap: r.nama_penyadap || '',
-                            petak: r.petak || '',
-                            estimasi_hasil: parseFloat(r.estimasi_hasil) || 0,
-                            kondisi_lapangan: r.kondisi_lapangan || 'Normal',
-                            kendala: r.kendala || ''
-                        }));
+                        const rawData = res.data || [];
+                        const fmt = rawData.map(r => {
+                            // Mencoba mencari key dengan case-insensitive atau variasi nama
+                            const findKey = (obj, target) => {
+                                const keys = Object.keys(obj);
+                                return keys.find(k => k.toLowerCase().replace(/_/g,'') === target.toLowerCase().replace(/_/g,''));
+                            };
+
+                            const getVal = (obj, target) => {
+                                const k = findKey(obj, target);
+                                return k ? obj[k] : null;
+                            };
+
+                            return {
+                                id: getVal(r, 'id') || 'c-' + Math.random().toString(36).substr(2,9),
+                                tanggal: getVal(r, 'tanggal') || '',
+                                nama_penyadap: getVal(r, 'nama_penyadap') || getVal(r, 'nama') || '',
+                                petak: getVal(r, 'petak') || getVal(r, 'kode_petak') || '',
+                                estimasi_hasil: parseFloat(getVal(r, 'estimasi_hasil')) || 0,
+                                kondisi_lapangan: getVal(r, 'kondisi_lapangan') || 'Normal',
+                                kendala: getVal(r, 'kendala') || ''
+                            };
+                        });
+
                         fmt.sort((a, b) => new Date(b.tanggal) - new Date(a.tanggal));
                         lsSet(LS.CLOUD_CACHE, fmt);
                         globalRecords = fmt;
                         callback(fmt);
-                    } else { fallback(); }
+                    } else { 
+                        fallback(res.message || 'API Google Sheets mengembalikan status error.'); 
+                    }
                 })
-                .catch(() => fallback());
-        } else { fallback(); }
+                .catch(err => fallback(`Gagal mengambil data: ${err.message}`));
+        } else { 
+            fallback('Koneksi internet terputus. Menggunakan data offline.'); 
+        }
     }
 
     // ======================== 3. DASHBOARD MONITORING ========================
@@ -498,12 +561,19 @@ document.addEventListener('DOMContentLoaded', function () {
         const thisYear  = now.getFullYear();
         const thisMonth = now.getMonth();
 
-        // Hitung total produksi per penyadap
+        // Hitung total produksi per penyadap & petak
         const prodPerPenyadap = {};
+        const prodPerPetak = {};
+        
         originalPenyadapList.forEach(p => { prodPerPenyadap[p.nama] = 0; });
+        originalPetakList.forEach(b => { prodPerPetak[b.kode] = 0; });
+        
         records.forEach(r => {
             if (prodPerPenyadap.hasOwnProperty(r.nama_penyadap)) {
                 prodPerPenyadap[r.nama_penyadap] += r.estimasi_hasil;
+            }
+            if (prodPerPetak.hasOwnProperty(r.petak)) {
+                prodPerPetak[r.petak] += r.estimasi_hasil;
             }
         });
 
@@ -574,7 +644,7 @@ document.addEventListener('DOMContentLoaded', function () {
                             📐 <strong>Luas:</strong> ${totalLuas.toFixed(1)} Ha
                         </div>
                         <div class="mk-progress-label" style="margin-top: 12px;">
-                            <span>Produksi: <strong>${actualProd.toFixed(1)} kg</strong></span>
+                            <span>Capaian YTD: <strong>${actualProd.toFixed(1)} kg</strong></span>
                             <span>Target: ${totalTarget.toFixed(0)} kg</span>
                         </div>
                         <div class="mk-progress-bar-wrap">
@@ -667,11 +737,11 @@ document.addEventListener('DOMContentLoaded', function () {
                         <div class="mk-stats-row" style="margin-top: 16px; border-top: 1px solid var(--border); padding-top: 16px;">
                             <div class="mk-stat">
                                 <div class="mk-stat-val">${pct.toFixed(1)}%</div>
-                                <div class="mk-stat-label">Persentase Capaian</div>
+                                <div class="mk-stat-label">Capaian YTD</div>
                             </div>
                             <div class="mk-stat">
                                 <div class="mk-stat-val">${mPenyadaps.reduce((sum, p) => sum + (absPerPenyadap[p.nama]?.total || 0), 0)}x</div>
-                                <div class="mk-stat-label">Total Tidak Hadir Tapper</div>
+                                <div class="mk-stat-label">Total Tidak Hadir</div>
                             </div>
                             <div class="mk-stat">
                                 <div class="mk-stat-val">${Math.max(0, totalTarget - actualProd).toFixed(0)} kg</div>
@@ -702,9 +772,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 penyadapList.forEach(p => {
                     const target = targets.find(t => t.petak === p.petak && parseInt(t.tahun) === thisYear);
                     const targetTahunan    = target ? parseFloat(target.tahunan)  : 3600;
-                    const targetPerPenyadap = targetTahunan; // target sudah per penyadap
                     const actual = prodPerPenyadap[p.nama] || 0;
-                    const pct    = targetPerPenyadap > 0 ? Math.min(100, (actual / targetPerPenyadap) * 100) : 0;
+                    const pct    = targetTahunan > 0 ? Math.min(100, (actual / targetTahunan) * 100) : 0;
 
                     let grade = 'A', gradeClass = 'a', cardClass = '';
                     if (pct >= 90)      { grade = 'A'; gradeClass = 'a'; }
@@ -726,22 +795,22 @@ document.addEventListener('DOMContentLoaded', function () {
                         </div>
                         <div class="mk-progress-label">
                             <span>Produksi: <strong>${actual.toFixed(1)} kg</strong></span>
-                            <span>Target: ${targetPerPenyadap.toFixed(0)} kg</span>
+                            <span>Target: ${targetTahunan.toFixed(0)} kg</span>
                         </div>
                         <div class="mk-progress-bar-wrap">
                             <div class="mk-progress-bar ${barClass}" style="width: ${pct.toFixed(1)}%"></div>
                         </div>
                         <div class="mk-stats-row">
                             <div class="mk-stat">
-                                <div class="mk-stat-val">${pct.toFixed(0)}%</div>
-                                <div class="mk-stat-label">Capaian</div>
+                                <div class="mk-stat-val">${pct.toFixed(1)}%</div>
+                                <div class="mk-stat-label">Capaian YTD</div>
                             </div>
                             <div class="mk-stat">
                                 <div class="mk-stat-val">${absInfo.total || 0}x</div>
                                 <div class="mk-stat-label">Tdk Hadir</div>
                             </div>
                             <div class="mk-stat">
-                                <div class="mk-stat-val">${(targetPerPenyadap - actual).toFixed(0)} kg</div>
+                                <div class="mk-stat-val">${Math.max(0, targetTahunan - actual).toFixed(0)} kg</div>
                                 <div class="mk-stat-label">Sisa Target</div>
                             </div>
                         </div>
@@ -750,7 +819,23 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         }
 
-        // Chart: Target Tahunan per Penyadap
+        // Chart 1: Target Tahunan per Petak
+        const pCodes = petakList.map(b => b.kode);
+        const pActuals = pCodes.map(c => +(prodPerPetak[c] || 0).toFixed(1));
+        const pTargets = pCodes.map(c => {
+            const t = targets.find(x => x.petak === c && parseInt(x.tahun) === thisYear);
+            return t ? parseFloat(t.tahunan) : 3600;
+        });
+
+        initChart('chartTargetPetak', 'bar', {
+            labels: pCodes,
+            datasets: [
+                { label: 'Aktual (kg)', data: pActuals, backgroundColor: GA, borderRadius: 6 },
+                { label: 'Target (kg)', data: pTargets, backgroundColor: 'rgba(27,67,50,0.1)', borderColor: G, borderWidth: 1.5, borderRadius: 6 }
+            ]
+        }, { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top' } }, scales: { y: { beginAtZero: true } } });
+
+        // Chart 2: Target Tahunan per Penyadap
         const names  = penyadapList.map(p => p.nama);
         const actuals = names.map(n => +(prodPerPenyadap[n] || 0).toFixed(1));
         const tgts   = penyadapList.map(p => {
@@ -761,12 +846,12 @@ document.addEventListener('DOMContentLoaded', function () {
         initChart('chartTargetTahunan', 'bar', {
             labels: names,
             datasets: [
-                { label: 'Produksi Aktual (kg)', data: actuals, backgroundColor: '#40916c', borderRadius: 6 },
-                { label: 'Target Tahunan (kg)',  data: tgts,    backgroundColor: 'rgba(27,67,50,0.15)', borderColor: '#1b4332', borderWidth: 2, borderRadius: 6 }
+                { label: 'Aktual (kg)', data: actuals, backgroundColor: GL, borderRadius: 6 },
+                { label: 'Target (kg)',  data: tgts,    backgroundColor: 'rgba(27,67,50,0.1)', borderColor: G, borderWidth: 1.5, borderRadius: 6 }
             ]
         }, { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top' } }, scales: { y: { beginAtZero: true } } });
 
-        // Chart: Target Bulanan bulan ini (Periode 1 & 2)
+        // Chart 3: Target Bulanan per Periode (P1 vs P2)
         const p1Actuals = penyadapList.map(p => {
             return records.filter(r => {
                 const d = new Date(r.tanggal);
@@ -779,18 +864,37 @@ document.addEventListener('DOMContentLoaded', function () {
                 return r.nama_penyadap === p.nama && d.getFullYear() === thisYear && d.getMonth() === thisMonth && d.getDate() > 15;
             }).reduce((s, r) => s + r.estimasi_hasil, 0);
         });
-        const p1Targets = penyadapList.map(p => parseFloat(p.periode1) || 0);
-        const p2Targets = penyadapList.map(p => parseFloat(p.periode2) || 0);
+        
+        // Asumsi target bulanan dibagi 2 periode sama rata dari target bulanan di metadata penyadap
+        const p1Targets = penyadapList.map(p => (parseFloat(p.periode1) || 0));
+        const p2Targets = penyadapList.map(p => (parseFloat(p.periode2) || 0));
 
         initChart('chartTargetBulanan', 'bar', {
             labels: names,
             datasets: [
-                { label: 'Periode 1 Aktual', data: p1Actuals.map(v => +v.toFixed(1)), backgroundColor: '#52b788', borderRadius: 4 },
-                { label: 'Periode 1 Target', data: p1Targets, backgroundColor: 'rgba(82,183,136,0.2)', borderColor: '#52b788', borderWidth: 1.5, borderRadius: 4 },
-                { label: 'Periode 2 Aktual', data: p2Actuals.map(v => +v.toFixed(1)), backgroundColor: '#f4a261', borderRadius: 4 },
-                { label: 'Periode 2 Target', data: p2Targets, backgroundColor: 'rgba(244,162,97,0.2)', borderColor: '#f4a261', borderWidth: 1.5, borderRadius: 4 },
+                { label: 'P1 Aktual (1-15)', data: p1Actuals.map(v => +v.toFixed(1)), backgroundColor: GA, borderRadius: 4 },
+                { label: 'P1 Target', data: p1Targets, backgroundColor: 'rgba(82,183,136,0.2)', borderColor: GA, borderWidth: 1, borderRadius: 4 },
+                { label: 'P2 Aktual (16-31)', data: p2Actuals.map(v => +v.toFixed(1)), backgroundColor: Y, borderRadius: 4 },
+                { label: 'P2 Target', data: p2Targets, backgroundColor: 'rgba(244,162,97,0.2)', borderColor: Y, borderWidth: 1, borderRadius: 4 },
             ]
-        }, { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top' } }, scales: { y: { beginAtZero: true } } });
+        }, { 
+            responsive: true, 
+            maintainAspectRatio: false, 
+            plugins: { 
+                legend: { position: 'top' },
+                tooltip: {
+                    callbacks: {
+                        footer: (items) => {
+                            const idx = items[0].dataIndex;
+                            const p1Pct = p1Targets[idx] > 0 ? (p1Actuals[idx] / p1Targets[idx] * 100).toFixed(1) : 0;
+                            const p2Pct = p2Targets[idx] > 0 ? (p2Actuals[idx] / p2Targets[idx] * 100).toFixed(1) : 0;
+                            return `Prog P1: ${p1Pct}%\nProg P2: ${p2Pct}%`;
+                        }
+                    }
+                }
+            }, 
+            scales: { y: { beginAtZero: true } } 
+        });
 
         // Tabel ketidakhadiran
         const tbody = document.getElementById('ketidakhadiranTbody');
@@ -1517,28 +1621,64 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     // ======================== 7. MAP VISUALIZER ========================
-    const predefinedBlocks = ['P.01 - B.01', 'P.02 - B.05', 'P.03 - B.12', 'P.04 - B.08', 'P.05 - B.03', 'P.06 - B.10'];
     const mapBlocks = document.querySelectorAll('.map-block');
 
     function renderMap(records) {
-        const allPetak = getPetakList().map(b => b.kode);
-        const useBlocks = allPetak.length ? allPetak : predefinedBlocks;
+        const petakList = getPetakList();
         mapDataCache = [];
 
-        useBlocks.forEach(b => {
-            const br = records.filter(r => r.petak === b);
+        // Map SVG blocks by index to the petakList from spreadsheet
+        mapBlocks.forEach((el, index) => {
+            const petak = petakList[index];
+            if (!petak) {
+                el.style.display = 'none'; // Sembunyikan blok jika tidak ada petak ke-n
+                // Sembunyikan juga teksnya
+                const textEl = document.querySelector(`.map-text:nth-of-type(${index + 1})`);
+                if (textEl) textEl.style.display = 'none';
+                return;
+            }
+
+            el.style.display = 'block';
+            const b = petak.kode;
+            el.setAttribute('data-block-id', b);
+            
+            // Update text inside SVG
+            const textEl = document.querySelector(`.map-text:nth-of-type(${index + 1})`);
+            if (textEl) {
+                textEl.style.display = 'block';
+                // Jika kode terlalu panjang, ambil 4 karakter pertama saja untuk label peta
+                textEl.textContent = b.length > 7 ? b.substring(0, 5) + '..' : b;
+            }
+
+            const br = records.filter(r => r.petak && (r.petak === b || r.petak.startsWith(b + ' ') || r.petak.startsWith(b + '-')));
+            
             const avg = br.length > 0 ? br.reduce((s, r) => s + r.estimasi_hasil, 0) / br.length : 0;
             const latest = br[0] || { tanggal: '-', nama_penyadap: 'Belum ada', kondisi_lapangan: 'Normal', kendala: 'Tidak ada' };
             const cond = latest.kondisi_lapangan;
             let status = 'hijau', statusText = 'Produksi Baik';
-            if (avg < 5 || cond === 'Pohon Rusak' || cond === 'Wadah Rusak') { status = 'merah'; statusText = 'Perlu Pengecekan'; }
-            else if (avg <= 15 || cond === 'Hujan') { status = 'kuning'; statusText = 'Produksi Menurun'; }
-            mapDataCache.push({ petak: b, avg_produksi: +avg.toFixed(1), terakhir_update: latest.tanggal, penyadap_terakhir: latest.nama_penyadap, kondisi_terakhir: latest.kondisi_lapangan, kendala_terakhir: latest.kendala || 'Tidak ada', status, status_text: statusText });
-        });
+            
+            if (br.length === 0) {
+                status = ''; // Tetap hitam jika tidak ada data sama sekali
+                statusText = 'Belum Ada Data';
+            } else if (avg < 5 || cond === 'Pohon Rusak' || cond === 'Wadah Rusak') { 
+                status = 'merah'; statusText = 'Perlu Pengecekan'; 
+            } else if (avg <= 15 || cond === 'Hujan') { 
+                status = 'kuning'; statusText = 'Produksi Menurun'; 
+            }
+            
+            mapDataCache.push({ 
+                petak: b, 
+                avg_produksi: +avg.toFixed(1), 
+                terakhir_update: latest.tanggal, 
+                penyadap_terakhir: latest.nama_penyadap, 
+                kondisi_terakhir: latest.kondisi_lapangan, 
+                kendala_terakhir: latest.kendala || 'Tidak ada', 
+                status, 
+                status_text: statusText 
+            });
 
-        mapDataCache.forEach(block => {
-            const el = document.querySelector(`.map-block[data-block-id="${block.petak}"]`);
-            if (el) { el.classList.remove('hijau', 'kuning', 'merah'); el.classList.add(block.status); }
+            el.classList.remove('hijau', 'kuning', 'merah'); 
+            if (status) el.classList.add(status);
         });
 
         const sel = document.querySelector('.map-block.selected');
@@ -1680,13 +1820,19 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Load data & render dashboard
     loadAllData(records => {
-        renderDashboard(records);
-        // Also update filter petak dropdown
+        // Find current active tab and re-render it
+        const activeItem = document.querySelector('.sidebar-menu li.active');
+        const activeTab = activeItem ? activeItem.getAttribute('data-tab') : 'dashboard';
+        
+        console.log(`Data sinkronisasi selesai. Refreshing tab: ${activeTab}`);
+        
+        // Render current tab with new data
+        renderTabView(activeTab);
+        
+        // Also ensure map and dropdowns are updated
+        renderMap(records);
         populatePetakDropdowns();
-
-        // Render mandor table if active
-        const activeTab = document.querySelector('.sidebar-menu li.active')?.getAttribute('data-tab');
-        if (activeTab === 'mandor') renderMandorTable();
-        else if (activeTab === 'petak-target') renderPetakTargetTable();
+        
+        // If we are on dashboard, renderDashboard is already called by renderTabView
     });
 });
