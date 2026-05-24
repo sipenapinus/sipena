@@ -102,17 +102,23 @@ document.addEventListener('DOMContentLoaded', function () {
             return;
         }
 
-        // Cloud Mode: Fetch all rows from Google Sheets to extract active options
+        // Cloud Mode: Fetch all metadata from Google Sheets
         fetch(WEB_APP_URL)
             .then(res => res.json())
             .then(res => {
-                if (res.status === 'success' && res.data && res.data.length > 0) {
-                    // Extract unique workers and blocks from data
-                    const cloudWorkers = res.data.map(d => d.nama_penyadap).filter(Boolean);
-                    const cloudBlocks = res.data.map(d => d.petak).filter(Boolean);
-
-                    workers = [...workers, ...cloudWorkers];
-                    blocks = [...blocks, ...cloudBlocks];
+                if (res.status === 'success') {
+                    if (res.penyadap && res.penyadap.length) {
+                        const cloudWorkers = res.penyadap
+                            .filter(p => p.status === 'Aktif' && (supervised.length === 0 || supervised.includes(p.petak)))
+                            .map(p => p.nama);
+                        if (cloudWorkers.length > 0) workers = cloudWorkers;
+                    }
+                    if (res.petak && res.petak.length) {
+                        const cloudBlocks = res.petak
+                            .filter(b => supervised.length === 0 || supervised.includes(b.kode))
+                            .map(b => b.kode);
+                        if (cloudBlocks.length > 0) blocks = cloudBlocks;
+                    }
                 }
 
                 populateDropdown(selectPenyadap, arrayUnique(workers), '-- Pilih Penyadap --');

@@ -1,5 +1,7 @@
-// assets/js/mandor.js
-// Javascript for SIPENA PINUS - Panel Mandor Lapangan
+// =========================================================================
+// KONFIGURASI: Isi URL Google Apps Script Anda di sini
+const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwTelvmwcTnXUKYx_CQKfUg82nltxUNWjHsckbCO9vNj3My_VYl2huNYqmqJZKhzO61Kg/exec";
+// =========================================================================
 
 document.addEventListener('DOMContentLoaded', function () {
 
@@ -69,6 +71,36 @@ document.addEventListener('DOMContentLoaded', function () {
             if (updated) {
                 lsSet(LS.PENYADAP, penyadapList);
             }
+        }
+    }
+
+    function syncCloudMetadata(callback) {
+        if (WEB_APP_URL && navigator.onLine) {
+            fetch(WEB_APP_URL)
+                .then(r => r.json())
+                .then(res => {
+                    if (res.status === 'success') {
+                        if (res.penyadap && Array.isArray(res.penyadap) && res.penyadap.length) {
+                            lsSet(LS.PENYADAP, res.penyadap);
+                        }
+                        if (res.petak && Array.isArray(res.petak) && res.petak.length) {
+                            lsSet(LS.PETAK, res.petak);
+                        }
+                        if (res.mandor && Array.isArray(res.mandor) && res.mandor.length) {
+                            lsSet(LS.MANDOR, res.mandor);
+                        }
+                        if (res.targets && Array.isArray(res.targets) && res.targets.length) {
+                            lsSet(LS.TARGET, res.targets);
+                        }
+                        if (res.monitoring && typeof res.monitoring === 'object' && Object.keys(res.monitoring).length) {
+                            lsSet(LS.MONITORING, res.monitoring);
+                        }
+                    }
+                    if (callback) callback();
+                })
+                .catch(() => { if (callback) callback(); });
+        } else {
+            if (callback) callback();
         }
     }
 
@@ -434,6 +466,19 @@ document.addEventListener('DOMContentLoaded', function () {
             lsSet(LS.PENYADAP, newList);
             renderPenyadapTable();
             showToast(`Penyadap "${p.nama}" berhasil dihapus.`, 'warning');
+
+            if (WEB_APP_URL && navigator.onLine) {
+                fetch(WEB_APP_URL, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    body: JSON.stringify({ action: 'deletePenyadap', id: id })
+                }).then(() => {
+                    showToast('Penyadap berhasil dihapus dari Google Sheets!', 'warning');
+                    syncCloudMetadata(() => {
+                        renderPenyadapTable();
+                    });
+                });
+            }
         }
     };
 
@@ -477,16 +522,17 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         }
 
+        const newP = id ? { id, nama, petak, status, pohon: pohonInput } : { id: 'p' + Date.now(), nama, petak, status, pohon: pohonInput };
+
         if (id) {
             // Update
             const idx = list.findIndex(x => x.id === id);
             if (idx >= 0) {
-                list[idx] = { id, nama, petak, status, pohon: pohonInput };
+                list[idx] = newP;
                 showToast(`Data penyadap "${nama}" berhasil diubah!`);
             }
         } else {
             // Add new
-            const newP = { id: 'p' + Date.now(), nama, petak, status, pohon: pohonInput };
             list.push(newP);
             showToast(`Penyadap "${nama}" berhasil ditambahkan!`);
         }
@@ -494,6 +540,19 @@ document.addEventListener('DOMContentLoaded', function () {
         lsSet(LS.PENYADAP, list);
         closeModal('modalPenyadap');
         renderPenyadapTable();
+
+        if (WEB_APP_URL && navigator.onLine) {
+            fetch(WEB_APP_URL, {
+                method: 'POST',
+                mode: 'no-cors',
+                body: JSON.stringify({ action: 'savePenyadap', data: newP })
+            }).then(() => {
+                showToast('Penyadap berhasil disinkronkan ke Google Sheets!');
+                syncCloudMetadata(() => {
+                    renderPenyadapTable();
+                });
+            });
+        }
     });
 
     // ======================== KELOLA PETAK (READ-ONLY) ========================
@@ -700,8 +759,21 @@ document.addEventListener('DOMContentLoaded', function () {
     };
 
     function saveMonitoringData(tgl) {
-        showToast(`✅ Data absensi tanggal ${tgl} berhasil disimpan!`, 'success');
+        const mon = getMonitoringData();
+        const dayData = mon[tgl] || {};
+
+        showToast(`Data absensi tanggal ${tgl} disimpan secara lokal!`, 'success');
         updateMonitoringCounts();
+
+        if (WEB_APP_URL && navigator.onLine) {
+            fetch(WEB_APP_URL, {
+                method: 'POST',
+                mode: 'no-cors',
+                body: JSON.stringify({ action: 'saveMonitoring', tanggal: tgl, data: dayData })
+            }).then(() => {
+                showToast(`✅ Data absensi ${tgl} berhasil disinkronkan ke Google Sheets!`, 'success');
+            });
+        }
     }
 
     function updateMonitoringCounts() {
@@ -864,15 +936,17 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     // Initial render / Authentication check
-    if (checkAuth()) {
-        initMandorSelector();
-        renderDashboardStats();
-    } else {
-        // Just populate the login dropdown in case it hasn't been
-        const loginSelect = document.getElementById('loginMandorSelect');
-        if (loginSelect) {
-            const mandors = getMandorList();
-            loginSelect.innerHTML = mandors.map(m => `<option value="${m.id}">${m.nama}</option>`).join('');
+    syncCloudMetadata(() => {
+        if (checkAuth()) {
+            initMandorSelector();
+            renderDashboardStats();
+        } else {
+            // Just populate the login dropdown in case it hasn't been
+            const loginSelect = document.getElementById('loginMandorSelect');
+            if (loginSelect) {
+                const mandors = getMandorList();
+                loginSelect.innerHTML = mandors.map(m => `<option value="${m.id}">${m.nama}</option>`).join('');
+            }
         }
-    }
+    });
 });

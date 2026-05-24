@@ -322,6 +322,23 @@ document.addEventListener('DOMContentLoaded', function () {
                 .then(r => r.json())
                 .then(res => {
                     if (res.status === 'success' && res.data) {
+                        // Sync Metadata tables if present
+                        if (res.penyadap && Array.isArray(res.penyadap) && res.penyadap.length) {
+                            lsSet(LS.PENYADAP, res.penyadap);
+                        }
+                        if (res.petak && Array.isArray(res.petak) && res.petak.length) {
+                            lsSet(LS.PETAK, res.petak);
+                        }
+                        if (res.mandor && Array.isArray(res.mandor) && res.mandor.length) {
+                            lsSet(LS.MANDOR, res.mandor);
+                        }
+                        if (res.targets && Array.isArray(res.targets) && res.targets.length) {
+                            lsSet(LS.TARGET, res.targets);
+                        }
+                        if (res.monitoring && typeof res.monitoring === 'object' && Object.keys(res.monitoring).length) {
+                            lsSet(LS.MONITORING, res.monitoring);
+                        }
+
                         const fmt = res.data.map(r => ({
                             id: r.id || 'c-' + Math.random().toString(36).substr(2,9),
                             tanggal: r.tanggal || '',
@@ -855,6 +872,19 @@ document.addEventListener('DOMContentLoaded', function () {
             lsSet(LS.MANDOR, newList);
             renderMandorTable();
             showToast('Mandor berhasil dihapus.', 'warning');
+
+            if (WEB_APP_URL && navigator.onLine) {
+                fetch(WEB_APP_URL, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    body: JSON.stringify({ action: 'deleteMandor', id: id })
+                }).then(() => {
+                    showToast('Data mandor berhasil dihapus dari Google Sheets!', 'warning');
+                    loadAllData(records => {
+                        renderMandorTable();
+                    });
+                });
+            }
         }
     };
 
@@ -870,22 +900,36 @@ document.addEventListener('DOMContentLoaded', function () {
         if (!nama) { showToast('Nama mandor wajib diisi!', 'error'); return; }
 
         let list = getMandorList();
+        const mandorId = id || 'm' + Date.now();
+        const mandorData = { id: mandorId, nama, nik, petak };
 
         if (id) {
             const idx = list.findIndex(x => x.id === id);
             if (idx >= 0) {
-                list[idx] = { id, nama, nik, petak };
+                list[idx] = mandorData;
                 showToast(`Data mandor "${nama}" berhasil diubah!`);
             }
         } else {
-            const newM = { id: 'm' + Date.now(), nama, nik, petak };
-            list.push(newM);
+            list.push(mandorData);
             showToast(`Mandor "${nama}" berhasil ditambahkan!`);
         }
 
         lsSet(LS.MANDOR, list);
         closeModal('modalMandor');
         renderMandorTable();
+
+        if (WEB_APP_URL && navigator.onLine) {
+            fetch(WEB_APP_URL, {
+                method: 'POST',
+                mode: 'no-cors',
+                body: JSON.stringify({ action: 'saveMandor', data: mandorData })
+            }).then(() => {
+                showToast('Data mandor berhasil disinkronkan ke Google Sheets!');
+                loadAllData(records => {
+                    renderMandorTable();
+                });
+            });
+        }
     });
 
     function renderPenyadapTable() {
@@ -977,6 +1021,19 @@ document.addEventListener('DOMContentLoaded', function () {
         lsSet(LS.PETAK, list);
         renderMandorTab();
         showToast('Petak dihapus.', 'warning');
+
+        if (WEB_APP_URL && navigator.onLine) {
+            fetch(WEB_APP_URL, {
+                method: 'POST',
+                mode: 'no-cors',
+                body: JSON.stringify({ action: 'deletePetak', id: id })
+            }).then(() => {
+                showToast('Petak berhasil dihapus dari Google Sheets!', 'warning');
+                loadAllData(records => {
+                    renderMandorTab();
+                });
+            });
+        }
     };
 
     // Tambah Penyadap
@@ -1025,12 +1082,15 @@ document.addEventListener('DOMContentLoaded', function () {
         const exists = list.some(b => b.kode.toLowerCase() === kode.toLowerCase() && b.id !== id);
         if (exists) { showToast('Kode petak sudah terdaftar.', 'error'); return; }
 
+        const petakId = id || 'b' + Date.now();
+        const petakData = { id: petakId, kode, luas, pohon };
+
         if (id) {
             // Edit
             const idx = list.findIndex(b => b.id === id);
             if (idx >= 0) {
                 const oldKode = list[idx].kode;
-                list[idx] = { id, kode, luas, pohon };
+                list[idx] = petakData;
 
                 // Integrity: update tappers and targets
                 if (oldKode !== kode) {
@@ -1046,13 +1106,26 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         } else {
             // Add new
-            list.push({ id: 'b' + Date.now(), kode, luas, pohon });
+            list.push(petakData);
             showToast(`Petak "${kode}" berhasil ditambahkan!`);
         }
 
         lsSet(LS.PETAK, list);
         closeModal('modalPetak');
         renderPetakTargetTable();
+
+        if (WEB_APP_URL && navigator.onLine) {
+            fetch(WEB_APP_URL, {
+                method: 'POST',
+                mode: 'no-cors',
+                body: JSON.stringify({ action: 'savePetak', data: petakData })
+            }).then(() => {
+                showToast('Petak berhasil disinkronkan ke Google Sheets!');
+                loadAllData(records => {
+                    renderPetakTargetTable();
+                });
+            });
+        }
     });
 
     window.editPetak = function(id) {
@@ -1078,6 +1151,19 @@ document.addEventListener('DOMContentLoaded', function () {
             lsSet(LS.PETAK, newList);
             renderPetakTargetTable();
             showToast('Petak berhasil dihapus.', 'warning');
+
+            if (WEB_APP_URL && navigator.onLine) {
+                fetch(WEB_APP_URL, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    body: JSON.stringify({ action: 'deletePetak', id: id })
+                }).then(() => {
+                    showToast('Petak berhasil dihapus dari Google Sheets!', 'warning');
+                    loadAllData(records => {
+                        renderPetakTargetTable();
+                    });
+                });
+            }
         }
     };
 
@@ -1204,7 +1290,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     document.getElementById('btnSimpanTarget')?.addEventListener('click', () => {
-        const petak   = document.getElementById('targetPetakSelect')?.value;
+        const petak   = document.getElementById('targetPetakSelect')?.value || document.getElementById('targetPetakKode')?.value;
         const tahun   = document.getElementById('targetTahun')?.value;
         const tahunan = document.getElementById('targetTahunanTotal')?.value;
         const p1      = document.getElementById('targetBulan1')?.value;
@@ -1221,6 +1307,19 @@ document.addEventListener('DOMContentLoaded', function () {
         lsSet(LS.TARGET, targets);
         renderTargetTable();
         showToast(`Target petak ${petak} tahun ${tahun} disimpan!`, 'success');
+
+        if (WEB_APP_URL && navigator.onLine) {
+            fetch(WEB_APP_URL, {
+                method: 'POST',
+                mode: 'no-cors',
+                body: JSON.stringify({ action: 'saveTarget', data: entry })
+            }).then(() => {
+                showToast('Target berhasil disinkronkan ke Google Sheets!');
+                loadAllData(records => {
+                    renderTargetTable();
+                });
+            });
+        }
     });
 
     // ======================== 6. MONITORING HARIAN ========================
