@@ -1038,7 +1038,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     const checked = status === s ? 'checked' : '';
                     const safeId = `mon_${tgl}_${p.nama.replace(/\s+/g, '_')}_${s.replace(/\s+/g, '_')}`;
                     return `<input type="radio" class="mon-status-radio" name="mon_${tgl}_${p.nama.replace(/\s+/g, '_')}" value="${s}" id="${safeId}" ${checked} onchange="window.onMonStatusChange('${tgl}','${p.nama}',this.value)" style="margin-right: 4px; cursor:pointer;">
-                            <label class="mon-status-label" for="${safeId}" style="margin-right:12px; font-size:0.85rem; font-weight:500; cursor:pointer; color:var(--text-main);">${s}</label>`;
+                            <label class="mon-status-label" for="${safeId}" style="margin-right:12px; font-size:0.85rem; font-weight:500; cursor:pointer;">${s}</label>`;
                 }).join('');
 
                 const showKet = (status !== 'Hadir') ? 'block' : 'none';
