@@ -439,10 +439,32 @@ document.addEventListener('DOMContentLoaded', function () {
         }).join('');
     }
 
+    function populatePimpinanMandorDropdown() {
+        const select = document.getElementById('filterMandorSelect');
+        if (!select) return;
+
+        const mandorList = getMandorList();
+        const currentValue = select.value || 'all';
+
+        let html = '<option value="all">-- Semua Mandor --</option>';
+        html += mandorList.map(m => `<option value="${m.id}">${m.nama}</option>`).join('');
+        
+        select.innerHTML = html;
+        
+        // Restore selected value if it still exists in the list
+        if (currentValue === 'all' || mandorList.some(m => m.id === currentValue)) {
+            select.value = currentValue;
+        } else {
+            select.value = 'all';
+        }
+    }
+
     // ======================== 4. DASHBOARD PIMPINAN ========================
     function renderPimpinan(records) {
         const badge = document.getElementById('pimpinan-period-badge');
         if (badge) badge.textContent = `Periode: ${getCurrentMonthName()}`;
+
+        populatePimpinanMandorDropdown();
 
         const filterSelect = document.getElementById('filterMandorSelect');
         const selectedMandorId = filterSelect ? filterSelect.value : 'all';
@@ -757,14 +779,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 return r.nama_penyadap === p.nama && d.getFullYear() === thisYear && d.getMonth() === thisMonth && d.getDate() > 15;
             }).reduce((s, r) => s + r.estimasi_hasil, 0);
         });
-        const p1Targets = penyadapList.map(p => {
-            const t = targets.find(x => x.petak === p.petak && parseInt(x.tahun) === thisYear);
-            return t ? parseFloat(t.periode1) : 150;
-        });
-        const p2Targets = penyadapList.map(p => {
-            const t = targets.find(x => x.petak === p.petak && parseInt(x.tahun) === thisYear);
-            return t ? parseFloat(t.periode2) : 150;
-        });
+        const p1Targets = penyadapList.map(p => parseFloat(p.periode1) || 0);
+        const p2Targets = penyadapList.map(p => parseFloat(p.periode2) || 0);
 
         initChart('chartTargetBulanan', 'bar', {
             labels: names,
@@ -938,7 +954,12 @@ document.addEventListener('DOMContentLoaded', function () {
         if (!tbody) return;
         tbody.innerHTML = list.length ? list.map(p => `
             <tr>
-                <td><strong>${p.nama}</strong></td>
+                <td>
+                    <strong>${p.nama}</strong>
+                    <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 4px;">
+                        Pohon: <strong>${p.pohon || 0} ph</strong> | Luas: <strong>${p.luas ? p.luas + ' Ha' : '-'}</strong> | Target: <strong>${p.target ? p.target + ' kg/th' : '-'}</strong>
+                    </div>
+                </td>
                 <td><code style="background:#edf2f7;padding:3px 7px;border-radius:4px;">${p.petak}</code></td>
                 <td><span class="status-badge-${p.status === 'Aktif' ? 'aktif' : 'nonaktif'}">${p.status}</span></td>
                 <td>

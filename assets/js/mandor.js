@@ -196,10 +196,16 @@ document.addEventListener('DOMContentLoaded', function () {
         document.getElementById('inputNamaPenyadap').value = '';
         document.getElementById('inputPetakPenyadap').selectedIndex = 0;
         document.getElementById('inputPohonPenyadap').value = '';
+        document.getElementById('inputLuasPenyadap').value = '';
+        document.getElementById('inputTargetPenyadap').value = '';
         document.getElementById('inputStatusPenyadap').value = 'Aktif';
 
         const infoEl = document.getElementById('infoSisaPohon');
         if (infoEl) infoEl.textContent = '';
+        const infoLuasEl = document.getElementById('infoSisaLuas');
+        if (infoLuasEl) infoLuasEl.textContent = '';
+        const infoTargetEl = document.getElementById('infoSisaTarget');
+        if (infoTargetEl) infoTargetEl.textContent = '';
     }
 
     // ======================== MANDOR SELECTOR INITIALIZATION ========================
@@ -365,7 +371,12 @@ document.addEventListener('DOMContentLoaded', function () {
             <tr>
                 <td><strong>${p.nama}</strong></td>
                 <td><code style="background:#edf2f7;padding:3px 7px;border-radius:4px;font-weight:600;">${p.petak}</code></td>
-                <td><strong>${(p.pohon || 0).toLocaleString('id-ID')} pohon</strong></td>
+                <td>
+                    <strong>${(p.pohon || 0).toLocaleString('id-ID')} pohon</strong>
+                    <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 4px;">
+                        Luas: <strong>${p.luas ? p.luas + ' Ha' : '-'}</strong> | Target: <strong>${p.target ? p.target + ' kg/th' : '-'}</strong>
+                    </div>
+                </td>
                 <td><span class="status-badge-${p.status === 'Aktif' ? 'aktif' : 'nonaktif'}">${p.status}</span></td>
                 <td style="text-align: center;">
                     <div class="action-btns" style="justify-content: center;">
@@ -380,37 +391,64 @@ document.addEventListener('DOMContentLoaded', function () {
     function updateModalTreeInfo() {
         const petakSelect = document.getElementById('inputPetakPenyadap');
         const infoEl = document.getElementById('infoSisaPohon');
+        const infoLuasEl = document.getElementById('infoSisaLuas');
+        const infoTargetEl = document.getElementById('infoSisaTarget');
         const idInput = document.getElementById('editPenyadapId');
 
-        if (!petakSelect || !infoEl) return;
+        if (!petakSelect) return;
 
         const petakKode = petakSelect.value;
         const currentPenyadapId = idInput ? idInput.value : '';
 
         if (!petakKode) {
-            infoEl.textContent = '';
+            if (infoEl) infoEl.textContent = '';
+            if (infoLuasEl) infoLuasEl.textContent = '';
+            if (infoTargetEl) infoTargetEl.textContent = '';
             return;
         }
 
         const petakList = getPetakList();
         const targetPetak = petakList.find(b => b.kode === petakKode);
         if (!targetPetak) {
-            infoEl.textContent = 'Petak tidak ditemukan';
+            if (infoEl) infoEl.textContent = 'Petak tidak ditemukan';
             return;
         }
 
         const totalPohon = parseInt(targetPetak.pohon) || 0;
+        const totalLuas = parseFloat(targetPetak.luas) || 0;
+
+        const targets = getTargetList();
+        const thisYear = new Date().getFullYear();
+        const targetEntry = targets.find(t => t.petak === petakKode && parseInt(t.tahun) === thisYear) || { tahunan: 0 };
+        const totalTarget = parseFloat(targetEntry.tahunan) || 0;
+
         const penyadapList = getPenyadapList();
-
-        // hitung pohon yang dipegang penyadap aktif LAIN
         const otherActive = penyadapList.filter(x => x.petak === petakKode && x.status === 'Aktif' && x.id !== currentPenyadapId);
-        const allocated = otherActive.reduce((sum, x) => sum + (parseInt(x.pohon) || 0), 0);
-        const sisa = Math.max(0, totalPohon - allocated);
 
-        infoEl.innerHTML = `🌳 Kapasitas Petak: <strong>${totalPohon.toLocaleString('id-ID')}</strong> pohon | Sisa Idle (Bisa disadap): <strong>${sisa.toLocaleString('id-ID')}</strong> pohon`;
+        // Calculate Trees
+        const allocatedPohon = otherActive.reduce((sum, x) => sum + (parseInt(x.pohon) || 0), 0);
+        const sisaPohon = Math.max(0, totalPohon - allocatedPohon);
 
-        // Jika sisa = 0, beri warna merah, jika tidak beri warna hijau
-        infoEl.style.color = sisa > 0 ? '#2e7d32' : '#e53935';
+        // Calculate Area (Luas)
+        const allocatedLuas = otherActive.reduce((sum, x) => sum + (parseFloat(x.luas) || 0), 0);
+        const sisaLuas = Math.max(0, totalLuas - allocatedLuas);
+
+        // Calculate Target
+        const allocatedTarget = otherActive.reduce((sum, x) => sum + (parseFloat(x.target) || 0), 0);
+        const sisaTarget = Math.max(0, totalTarget - allocatedTarget);
+
+        if (infoEl) {
+            infoEl.innerHTML = `🌳 Kapasitas Petak: <strong>${totalPohon.toLocaleString('id-ID')}</strong> pohon | Sisa Idle (Bisa disadap): <strong>${sisaPohon.toLocaleString('id-ID')}</strong> pohon`;
+            infoEl.style.color = sisaPohon > 0 ? '#2e7d32' : '#e53935';
+        }
+        if (infoLuasEl) {
+            infoLuasEl.innerHTML = `📐 Luas Petak: <strong>${totalLuas.toLocaleString('id-ID')}</strong> Ha | Sisa Luas Idle: <strong>${sisaLuas.toLocaleString('id-ID')}</strong> Ha`;
+            infoLuasEl.style.color = sisaLuas > 0 ? '#2e7d32' : '#e53935';
+        }
+        if (infoTargetEl) {
+            infoTargetEl.innerHTML = `🎯 Target Tahunan Petak: <strong>${totalTarget.toLocaleString('id-ID')}</strong> kg | Sisa Alokasi Target: <strong>${sisaTarget.toLocaleString('id-ID')}</strong> kg`;
+            infoTargetEl.style.color = sisaTarget > 0 ? '#2e7d32' : '#e53935';
+        }
     }
 
     function populatePetakSelectDropdown() {
@@ -449,6 +487,8 @@ document.addEventListener('DOMContentLoaded', function () {
         document.getElementById('inputNamaPenyadap').value = p.nama;
         document.getElementById('inputPetakPenyadap').value = p.petak;
         document.getElementById('inputPohonPenyadap').value = p.pohon || 0;
+        document.getElementById('inputLuasPenyadap').value = p.luas || '';
+        document.getElementById('inputTargetPenyadap').value = p.target || '';
         document.getElementById('inputStatusPenyadap').value = p.status;
 
         document.getElementById('modalPenyadapTitle').textContent = 'Edit Data Penyadap';
@@ -494,13 +534,17 @@ document.addEventListener('DOMContentLoaded', function () {
         const nama = document.getElementById('inputNamaPenyadap').value.trim();
         const petak = document.getElementById('inputPetakPenyadap').value;
         const pohonInput = parseInt(document.getElementById('inputPohonPenyadap').value) || 0;
+        const luasInput = parseFloat(document.getElementById('inputLuasPenyadap').value) || 0;
+        const targetInput = parseFloat(document.getElementById('inputTargetPenyadap').value) || 0;
         const status = document.getElementById('inputStatusPenyadap').value;
 
         if (!nama) { showToast('Mohon isi nama penyadap!', 'error'); return; }
         if (!petak) { showToast('Mohon pilih petak tugas!', 'error'); return; }
         if (pohonInput <= 0) { showToast('Mohon isi jumlah pohon sadap dengan angka lebih dari 0!', 'error'); return; }
+        if (luasInput <= 0) { showToast('Mohon isi luas lahan dengan angka lebih dari 0!', 'error'); return; }
+        if (targetInput <= 0) { showToast('Mohon isi target tahunan penyadap dengan angka lebih dari 0!', 'error'); return; }
 
-        // Validasi Kapasitas Pohon Petak
+        // Validasi Kapasitas Petak (Pohon, Luas, dan Target)
         const petakList = getPetakList();
         const targetPetak = petakList.find(b => b.kode === petak);
         if (!targetPetak) {
@@ -509,20 +553,46 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         const totalPohonPetak = parseInt(targetPetak.pohon) || 0;
+        const totalLuasPetak = parseFloat(targetPetak.luas) || 0;
+
+        const targets = getTargetList();
+        const thisYear = new Date().getFullYear();
+        const targetEntry = targets.find(t => t.petak === petak && parseInt(t.tahun) === thisYear) || { tahunan: 0 };
+        const totalTargetPetak = parseFloat(targetEntry.tahunan) || 0;
+
         let list = getPenyadapList();
 
         if (status === 'Aktif') {
             const otherActivePenyadap = list.filter(x => x.petak === petak && x.status === 'Aktif' && x.id !== id);
-            const currentAllocated = otherActivePenyadap.reduce((sum, x) => sum + (parseInt(x.pohon) || 0), 0);
-            const maxAllowed = totalPohonPetak - currentAllocated;
 
-            if (pohonInput > maxAllowed) {
-                showToast(`Gagal! Akumulasi pohon sadap melebihi kapasitas petak ${petak}. Sisa pohon menganggur: ${maxAllowed} pohon.`, 'error');
+            // Validasi Pohon
+            const currentAllocatedPohon = otherActivePenyadap.reduce((sum, x) => sum + (parseInt(x.pohon) || 0), 0);
+            const maxAllowedPohon = totalPohonPetak - currentAllocatedPohon;
+            if (pohonInput > maxAllowedPohon) {
+                showToast(`Gagal! Akumulasi pohon sadap melebihi kapasitas petak ${petak}. Sisa pohon menganggur: ${maxAllowedPohon} pohon.`, 'error');
+                return;
+            }
+
+            // Validasi Luas
+            const currentAllocatedLuas = otherActivePenyadap.reduce((sum, x) => sum + (parseFloat(x.luas) || 0), 0);
+            const maxAllowedLuas = totalLuasPetak - currentAllocatedLuas;
+            if (luasInput > maxAllowedLuas) {
+                showToast(`Gagal! Akumulasi luas lahan melebihi luas petak ${petak}. Sisa luas menganggur: ${maxAllowedLuas.toFixed(2)} Ha.`, 'error');
+                return;
+            }
+
+            // Validasi Target
+            const currentAllocatedTarget = otherActivePenyadap.reduce((sum, x) => sum + (parseFloat(x.target) || 0), 0);
+            const maxAllowedTarget = totalTargetPetak - currentAllocatedTarget;
+            if (targetInput > maxAllowedTarget) {
+                showToast(`Gagal! Akumulasi target penyadap melebihi target petak ${petak}. Sisa target belum dialokasikan: ${maxAllowedTarget.toFixed(0)} kg.`, 'error');
                 return;
             }
         }
 
-        const newP = id ? { id, nama, petak, status, pohon: pohonInput } : { id: 'p' + Date.now(), nama, petak, status, pohon: pohonInput };
+        const newP = id ? 
+            { id, nama, petak, status, pohon: pohonInput, luas: luasInput, target: targetInput } : 
+            { id: 'p' + Date.now(), nama, petak, status, pohon: pohonInput, luas: luasInput, target: targetInput };
 
         if (id) {
             // Update
@@ -650,14 +720,54 @@ document.addEventListener('DOMContentLoaded', function () {
 
         const activeWorkers = getPenyadapList().filter(p => p.petak === petakKode && p.status === 'Aktif');
         document.getElementById('targetPetakKode').value = petakKode;
-        document.getElementById('modalTargetPenyadapNames').textContent = activeWorkers.length > 0
-            ? activeWorkers.map(w => w.nama).join(', ')
-            : 'Belum ada penyadap aktif ditugaskan pada petak ini.';
+
+        // Show names and individual targets of assigned tappers
+        const namesContainer = document.getElementById('modalTargetPenyadapNames');
+        if (namesContainer) {
+            namesContainer.innerHTML = activeWorkers.length > 0
+                ? activeWorkers.map(w => `<strong>${w.nama}</strong> (${(parseFloat(w.target) || 0).toLocaleString('id-ID')} kg/tahun)`).join('<br>')
+                : 'Belum ada penyadap aktif ditugaskan pada petak ini.';
+        }
+
+        // Calculate total target of tappers (or default to petak target)
+        const totalTapperTarget = activeWorkers.length > 0 
+            ? activeWorkers.reduce((sum, w) => sum + (parseFloat(w.target) || 0), 0)
+            : (parseFloat(target.tahunan) || 3600);
 
         document.getElementById('targetTahun').value = target.tahun;
-        document.getElementById('targetTahunanTotal').value = target.tahunan;
-        document.getElementById('targetBulan1').value = target.periode1;
-        document.getElementById('targetBulan2').value = target.periode2;
+        document.getElementById('targetTahunanTotal').value = totalTapperTarget;
+
+        // Render tapperTargetContainer
+        const container = document.getElementById('tapperTargetContainer');
+        if (container) {
+            if (activeWorkers.length === 0) {
+                container.innerHTML = '<div style="text-align: center; color: var(--text-muted); padding: 20px;">Tidak ada penyadap aktif di petak ini.</div>';
+            } else {
+                container.innerHTML = activeWorkers.map(w => `
+                    <div class="tapper-target-row" style="background: var(--bg-main); padding: 12px 16px; border-radius: 8px; border: 1.5px solid var(--border); margin-bottom: 8px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                            <span style="font-weight: 700; color: var(--primary-dark); font-size: 0.95rem;">👤 ${w.nama}</span>
+                            <span style="font-size: 0.85rem; color: var(--text-muted); font-weight: 600;">Target: ${(parseFloat(w.target) || 0).toLocaleString('id-ID')} kg/th</span>
+                        </div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                            <div class="form-group" style="margin-bottom: 0;">
+                                <label style="font-size: 0.75rem; font-weight: 700; color: var(--primary-light); margin-bottom: 4px;">Periode 1 (tgl 1-15)</label>
+                                <input type="number" class="form-control tapper-p1-input" data-tapper-id="${w.id}" value="${w.periode1 || 0}" min="0" style="padding: 6px 10px; font-size: 0.9rem; height: 36px;">
+                            </div>
+                            <div class="form-group" style="margin-bottom: 0;">
+                                <label style="font-size: 0.75rem; font-weight: 700; color: var(--primary-light); margin-bottom: 4px;">Periode 2 (tgl 16-31)</label>
+                                <input type="number" class="form-control tapper-p2-input" data-tapper-id="${w.id}" value="${w.periode2 || 0}" min="0" style="padding: 6px 10px; font-size: 0.9rem; height: 36px;">
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+                
+                // Attach change listeners to dynamic inputs
+                container.querySelectorAll('input').forEach(input => {
+                    input.addEventListener('input', calcAndShowTargetPerPenyadap);
+                });
+            }
+        }
 
         document.getElementById('modalTargetTitle').textContent = `Atur Target Petak: ${petakKode}`;
         
@@ -672,36 +782,25 @@ document.addEventListener('DOMContentLoaded', function () {
     function calcAndShowTargetPerPenyadap() {
         const petak = document.getElementById('targetPetakKode')?.value;
         const tahunan = parseFloat(document.getElementById('targetTahunanTotal')?.value) || 0;
-        const p1 = parseFloat(document.getElementById('targetBulan1')?.value) || 0;
-        const p2 = parseFloat(document.getElementById('targetBulan2')?.value) || 0;
         if (!petak) return;
 
-        const assigned = getPenyadapList().filter(p => p.petak === petak && p.status === 'Aktif');
-        const n = assigned.length || 1;
-
         const elTahunan = document.getElementById('targetPerPenyadapTahunan');
-        const elNilai = document.getElementById('nilaiTargetPerPenyadap');
-        const elBulanan = document.getElementById('targetBulananPerPenyadap');
-        const elNilaiBul = document.getElementById('nilaiTargetBulananPenyadap');
+        
+        let sumP1 = 0;
+        let sumP2 = 0;
+        const p1Inputs = document.querySelectorAll('.tapper-p1-input');
+        const p2Inputs = document.querySelectorAll('.tapper-p2-input');
+        p1Inputs.forEach(input => sumP1 += parseFloat(input.value) || 0);
+        p2Inputs.forEach(input => sumP2 += parseFloat(input.value) || 0);
 
-        if (tahunan > 0 && elTahunan && elNilai) {
+        if (elTahunan) {
             elTahunan.style.display = 'flex';
-            elNilai.textContent = `${(tahunan / n).toFixed(0)} kg/tahun (${n} penyadap)`;
-        } else if (elTahunan) {
-            elTahunan.style.display = 'none';
-        }
-        if ((p1 > 0 || p2 > 0) && elBulanan && elNilaiBul) {
-            elBulanan.style.display = 'flex';
-            elNilaiBul.textContent = `Periode 1: ${(p1 / n).toFixed(0)} kg | Periode 2: ${(p2 / n).toFixed(0)} kg`;
-        } else if (elBulanan) {
-            elBulanan.style.display = 'none';
+            const spanEl = elTahunan.querySelector('span');
+            if (spanEl) {
+                spanEl.innerHTML = `Total Alokasi Bulanan Petak: <strong>P1: ${sumP1.toLocaleString('id-ID')} kg | P2: ${sumP2.toLocaleString('id-ID')} kg</strong>`;
+            }
         }
     }
-
-    // Attach listeners to input elements inside modalTarget
-    ['targetBulan1', 'targetBulan2'].forEach(id => {
-        document.getElementById(id)?.addEventListener('input', calcAndShowTargetPerPenyadap);
-    });
 
     // Close target modal handler (using close triggers or manual)
     document.querySelectorAll('[data-modal-close="modalTarget"]').forEach(btn => {
@@ -715,14 +814,38 @@ document.addEventListener('DOMContentLoaded', function () {
         const petak = document.getElementById('targetPetakKode')?.value;
         const tahun = document.getElementById('targetTahun')?.value || '2026';
         const tahunan = parseFloat(document.getElementById('targetTahunanTotal')?.value) || 0;
-        const p1 = parseFloat(document.getElementById('targetBulan1')?.value) || 0;
-        const p2 = parseFloat(document.getElementById('targetBulan2')?.value) || 0;
 
         if (!petak) { showToast('Pilih petak.', 'error'); return; }
 
+        const p1Inputs = document.querySelectorAll('.tapper-p1-input');
+        const p2Inputs = document.querySelectorAll('.tapper-p2-input');
+        
+        let tapperUpdates = [];
+        let totalP1 = 0;
+        let totalP2 = 0;
+
+        p1Inputs.forEach((input, index) => {
+            const tId = input.getAttribute('data-tapper-id');
+            const p1Val = parseFloat(input.value) || 0;
+            const p2Val = parseFloat(p2Inputs[index].value) || 0;
+            tapperUpdates.push({ id: tId, periode1: p1Val, periode2: p2Val });
+            totalP1 += p1Val;
+            totalP2 += p2Val;
+        });
+
+        let penyadapList = getPenyadapList();
+        tapperUpdates.forEach(update => {
+            const idx = penyadapList.findIndex(p => p.id === update.id);
+            if (idx >= 0) {
+                penyadapList[idx].periode1 = update.periode1;
+                penyadapList[idx].periode2 = update.periode2;
+            }
+        });
+        lsSet(LS.PENYADAP, penyadapList);
+
         let targets = getTargetList();
         const idx = targets.findIndex(t => t.petak === petak && String(t.tahun) === String(tahun));
-        const entry = { petak, tahun: parseInt(tahun), tahunan: tahunan, periode1: p1, periode2: p2 };
+        const entry = { petak, tahun: parseInt(tahun), tahunan: tahunan, periode1: totalP1, periode2: totalP2 };
 
         if (idx >= 0) {
             targets[idx] = entry;
@@ -737,11 +860,27 @@ document.addEventListener('DOMContentLoaded', function () {
 
         // Sync with Google Sheets
         if (WEB_APP_URL && navigator.onLine) {
+            // Post Target total
             fetch(WEB_APP_URL, {
                 method: 'POST',
                 mode: 'no-cors',
                 body: JSON.stringify({ action: 'saveTarget', data: entry })
-            }).then(() => {
+            });
+
+            // Post individual tappers targets
+            const promises = tapperUpdates.map(update => {
+                const fullTapper = penyadapList.find(p => p.id === update.id);
+                if (fullTapper) {
+                    return fetch(WEB_APP_URL, {
+                        method: 'POST',
+                        mode: 'no-cors',
+                        body: JSON.stringify({ action: 'savePenyadap', data: fullTapper })
+                    });
+                }
+                return Promise.resolve();
+            });
+
+            Promise.all(promises).then(() => {
                 showToast('Target berhasil disinkronkan ke Google Sheets!');
                 if (typeof syncCloudMetadata === 'function') {
                     syncCloudMetadata(() => {
@@ -984,8 +1123,13 @@ document.addEventListener('DOMContentLoaded', function () {
             return;
         }
 
-        // Compare entered PIN with NIK
-        if (pinVal === targetMandor.nik) {
+        // Compare entered PIN with NIK (robust comparison: handles Google Sheets removing leading zeros like "002" -> "2")
+        const val1 = String(pinVal).trim();
+        const val2 = String(targetMandor.nik).trim();
+        const pinMatches = (val1 === val2) || 
+                            (!isNaN(val1) && !isNaN(val2) && parseInt(val1, 10) === parseInt(val2, 10));
+
+        if (pinMatches) {
             // Success!
             localStorage.setItem('sipena_logged_in_mandor', mandorId);
             localStorage.setItem(LS.ACTIVE_MANDOR, mandorId);
