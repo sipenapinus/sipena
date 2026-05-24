@@ -16,6 +16,7 @@ document.addEventListener('DOMContentLoaded', function () {
         MONITORING: 'sipena_monitoring',
         DEMO_DATA: 'sipena_demo_entries',
         CLOUD_CACHE: 'sipena_last_dashboard_data',
+        MANDOR:   'sipena_mandor',
     };
 
     // State global
@@ -32,25 +33,33 @@ document.addEventListener('DOMContentLoaded', function () {
         try { localStorage.setItem(key, JSON.stringify(val)); } catch {}
     }
 
+    function getMandorList() {
+        return lsGet(LS.MANDOR) || [
+            { id: 'm1', nama: 'Mandor Wawan', nik: '001', petak: ['P.01 - B.01', 'P.03 - B.12'] },
+            { id: 'm2', nama: 'Mandor Budi',  nik: '002', petak: ['P.02 - B.05', 'P.04 - B.08'] },
+            { id: 'm3', nama: 'Mandor Kardi', nik: '003', petak: ['P.05 - B.03', 'P.06 - B.10'] },
+        ];
+    }
+
     function getPenyadapList() {
         return lsGet(LS.PENYADAP) || [
-            { id: 'p1', nama: 'Slamet',  petak: 'P.01 - B.01', status: 'Aktif' },
-            { id: 'p2', nama: 'Budi',    petak: 'P.02 - B.05', status: 'Aktif' },
-            { id: 'p3', nama: 'Sukijo',  petak: 'P.03 - B.12', status: 'Aktif' },
-            { id: 'p4', nama: 'Tukimin', petak: 'P.04 - B.08', status: 'Aktif' },
-            { id: 'p5', nama: 'Wawan',   petak: 'P.05 - B.03', status: 'Aktif' },
-            { id: 'p6', nama: 'Kardi',   petak: 'P.06 - B.10', status: 'Aktif' },
+            { id: 'p1', nama: 'Slamet',  petak: 'P.01 - B.01', status: 'Aktif', pohon: 800 },
+            { id: 'p2', nama: 'Budi',    petak: 'P.02 - B.05', status: 'Aktif', pohon: 1000 },
+            { id: 'p3', nama: 'Sukijo',  petak: 'P.03 - B.12', status: 'Aktif', pohon: 700 },
+            { id: 'p4', nama: 'Tukimin', petak: 'P.04 - B.08', status: 'Aktif', pohon: 900 },
+            { id: 'p5', nama: 'Wawan',   petak: 'P.05 - B.03', status: 'Aktif', pohon: 800 },
+            { id: 'p6', nama: 'Kardi',   petak: 'P.06 - B.10', status: 'Aktif', pohon: 950 },
         ];
     }
 
     function getPetakList() {
         return lsGet(LS.PETAK) || [
-            { id: 'b1', kode: 'P.01 - B.01', luas: 12.5 },
-            { id: 'b2', kode: 'P.02 - B.05', luas: 15.0 },
-            { id: 'b3', kode: 'P.03 - B.12', luas: 10.0 },
-            { id: 'b4', kode: 'P.04 - B.08', luas: 13.0 },
-            { id: 'b5', kode: 'P.05 - B.03', luas: 11.5 },
-            { id: 'b6', kode: 'P.06 - B.10', luas: 14.0 },
+            { id: 'b1', kode: 'P.01 - B.01', luas: 12.5, pohon: 1200 },
+            { id: 'b2', kode: 'P.02 - B.05', luas: 15.0, pohon: 1500 },
+            { id: 'b3', kode: 'P.03 - B.12', luas: 10.0, pohon: 1000 },
+            { id: 'b4', kode: 'P.04 - B.08', luas: 13.0, pohon: 1300 },
+            { id: 'b5', kode: 'P.05 - B.03', luas: 11.5, pohon: 1100 },
+            { id: 'b6', kode: 'P.06 - B.10', luas: 14.0, pohon: 1400 },
         ];
     }
 
@@ -135,10 +144,18 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     });
 
+    const filterSelect = document.getElementById('filterMandorSelect');
+    if (filterSelect) {
+        filterSelect.addEventListener('change', function () {
+            renderPimpinan(globalRecords);
+        });
+    }
+
     const pageTitles = {
         dashboard:   ['Dashboard Monitoring', 'Sistem Monitoring Produksi Getah Berbasis Mandor & Wilayah Sadap'],
         pimpinan:    ['Dashboard Pimpinan',   'Evaluasi Kinerja Mandor & Progress Target Produksi'],
         mandor:      ['Kelola Mandor',         'Manajemen Penyadap, Petak Sadap, dan Target Produksi'],
+        'petak-target':['Kelola Petak & Target', 'Atur Kapasitas Petak Lahan & Target Bulanan/Tahunan Produksi'],
         monitoring:  ['Monitoring Harian',     'Pantau Kehadiran & Status Penyadap Setiap Hari'],
         'input-data':['Input Data Lapangan',  'Formulir Input Data Produksi bagi Mandor di Lapangan'],
         'peta-wilayah':['Pemetaan Wilayah Sadap', 'Visualisasi Status Produktivitas dan Kondisi Petak Hutan Pinus'],
@@ -156,6 +173,7 @@ document.addEventListener('DOMContentLoaded', function () {
             case 'dashboard':   renderDashboard(globalRecords); break;
             case 'pimpinan':    renderPimpinan(globalRecords);  break;
             case 'mandor':      renderMandorTab();              break;
+            case 'petak-target': renderPetakTargetTable();      break;
             case 'monitoring':  renderMonitoringTab();          break;
             case 'peta-wilayah': renderMap(globalRecords);      break;
             case 'laporan':     renderReportTable(globalRecords); break;
@@ -359,10 +377,33 @@ document.addEventListener('DOMContentLoaded', function () {
         const badge = document.getElementById('pimpinan-period-badge');
         if (badge) badge.textContent = `Periode: ${getCurrentMonthName()}`;
 
-        const penyadapList = getActivePenyadap();
-        const petakList    = getPetakList();
+        const filterSelect = document.getElementById('filterMandorSelect');
+        const selectedMandorId = filterSelect ? filterSelect.value : 'all';
+
+        const mandorList = getMandorList();
+        let activeMandorObj = null;
+        let supervisedPetaks = [];
+
+        if (selectedMandorId !== 'all') {
+            activeMandorObj = mandorList.find(m => m.id === selectedMandorId);
+            if (activeMandorObj) {
+                supervisedPetaks = activeMandorObj.petak || [];
+            }
+        }
+
+        const originalPenyadapList = getActivePenyadap();
+        const originalPetakList    = getPetakList();
         const targets      = getTargetList();
         const monitoring   = getMonitoringData();
+
+        // Filter lists based on selected mandor
+        const penyadapList = selectedMandorId === 'all' 
+            ? originalPenyadapList 
+            : originalPenyadapList.filter(p => supervisedPetaks.includes(p.petak));
+
+        const petakList = selectedMandorId === 'all'
+            ? originalPetakList
+            : originalPetakList.filter(b => supervisedPetaks.includes(b.kode));
 
         const now = new Date();
         const thisYear  = now.getFullYear();
@@ -370,7 +411,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
         // Hitung total produksi per penyadap
         const prodPerPenyadap = {};
-        penyadapList.forEach(p => { prodPerPenyadap[p.nama] = 0; });
+        originalPenyadapList.forEach(p => { prodPerPenyadap[p.nama] = 0; });
         records.forEach(r => {
             if (prodPerPenyadap.hasOwnProperty(r.nama_penyadap)) {
                 prodPerPenyadap[r.nama_penyadap] += r.estimasi_hasil;
@@ -379,7 +420,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
         // Hitung ketidakhadiran per penyadap
         const absPerPenyadap = {};
-        penyadapList.forEach(p => { absPerPenyadap[p.nama] = { total: 0, Sakit: 0, 'Ke Pertanian': 0, Hajatan: 0, Bangunan: 0, Lainnya: 0 }; });
+        originalPenyadapList.forEach(p => { absPerPenyadap[p.nama] = { total: 0, Sakit: 0, 'Ke Pertanian': 0, Hajatan: 0, Bangunan: 0, Lainnya: 0 }; });
         Object.entries(monitoring).forEach(([tgl, dayData]) => {
             const d = new Date(tgl);
             if ((now - d) / 86400000 <= 30) {
@@ -393,58 +434,231 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         });
 
+        // Render Summary Kinerja Mandor (Foreman Dashboard)
+        const mandorSummaryDashboard = document.getElementById('mandorSummaryDashboard');
+        if (mandorSummaryDashboard) {
+            let html = '';
+            if (selectedMandorId === 'all') {
+                mandorList.forEach(m => {
+                    const mPetaks = m.petak || [];
+                    const mPenyadaps = originalPenyadapList.filter(p => mPetaks.includes(p.petak));
+                    const mPetakList = originalPetakList.filter(b => mPetaks.includes(b.kode));
+
+                    const totalLuas = mPetakList.reduce((sum, b) => sum + (parseFloat(b.luas) || 0), 0);
+                    const totalPohon = mPetakList.reduce((sum, b) => sum + (parseInt(b.pohon) || 0), 0);
+                    const activePohon = mPenyadaps.reduce((sum, p) => sum + (parseInt(p.pohon) || 0), 0);
+                    const nganggurPohon = Math.max(0, totalPohon - activePohon);
+
+                    let actualProd = 0;
+                    mPenyadaps.forEach(p => {
+                        actualProd += prodPerPenyadap[p.nama] || 0;
+                    });
+
+                    let totalTarget = 0;
+                    mPetaks.forEach(petakKode => {
+                        const target = targets.find(t => t.petak === petakKode && parseInt(t.tahun) === thisYear);
+                        totalTarget += target ? parseFloat(target.tahunan) : 3600;
+                    });
+
+                    const pct = totalTarget > 0 ? Math.min(100, (actualProd / totalTarget) * 100) : 0;
+                    let grade = 'A', gradeClass = 'a', cardClass = '';
+                    if (pct >= 90)      { grade = 'A'; gradeClass = 'a'; }
+                    else if (pct >= 70) { grade = 'B'; gradeClass = 'b'; }
+                    else if (pct >= 50) { grade = 'C'; gradeClass = 'c'; cardClass = 'kuning'; }
+                    else                { grade = 'D'; gradeClass = 'd'; cardClass = 'merah'; }
+
+                    const barClass = pct >= 90 ? 'over' : pct < 50 ? 'under' : '';
+
+                    html += `
+                    <div class="mandor-kinerja-card ${cardClass}" style="border: 1.5px solid var(--primary-light);">
+                        <div class="mk-header">
+                            <div>
+                                <div class="mk-name" style="font-size: 1.15rem; color: var(--primary-dark);">${m.nama}</div>
+                                <div style="font-size: 0.75rem; color: var(--text-muted); font-weight:600; margin-top:2px;">NIK: ${m.nik || '-'}</div>
+                            </div>
+                            <div class="mk-grade ${gradeClass}">${grade}</div>
+                        </div>
+                        <div style="font-size: 0.85rem; color: var(--text-main); line-height: 1.5; margin-bottom: 12px;">
+                            📍 <strong>Petak Diawasi:</strong> ${mPetaks.join(', ') || 'Belum ada'} <br>
+                            👥 <strong>Penyadap:</strong> ${mPenyadaps.length} orang <br>
+                            🌳 <strong>Pohon:</strong> ${activePohon.toLocaleString('id-ID')} / ${totalPohon.toLocaleString('id-ID')} (${nganggurPohon} nganggur) <br>
+                            📐 <strong>Luas:</strong> ${totalLuas.toFixed(1)} Ha
+                        </div>
+                        <div class="mk-progress-label" style="margin-top: 12px;">
+                            <span>Produksi: <strong>${actualProd.toFixed(1)} kg</strong></span>
+                            <span>Target: ${totalTarget.toFixed(0)} kg</span>
+                        </div>
+                        <div class="mk-progress-bar-wrap">
+                            <div class="mk-progress-bar ${barClass}" style="width: ${pct.toFixed(1)}%"></div>
+                        </div>
+                        <div class="mk-stats-row">
+                            <div class="mk-stat">
+                                <div class="mk-stat-val">${pct.toFixed(0)}%</div>
+                                <div class="mk-stat-label">Capaian</div>
+                            </div>
+                            <div class="mk-stat">
+                                <div class="mk-stat-val">${mPenyadaps.reduce((sum, p) => sum + (absPerPenyadap[p.nama]?.total || 0), 0)}x</div>
+                                <div class="mk-stat-label">Tdk Hadir</div>
+                            </div>
+                            <div class="mk-stat">
+                                <div class="mk-stat-val">${Math.max(0, totalTarget - actualProd).toFixed(0)} kg</div>
+                                <div class="mk-stat-label">Sisa Target</div>
+                            </div>
+                        </div>
+                    </div>`;
+                });
+            } else {
+                if (activeMandorObj) {
+                    const mPetaks = activeMandorObj.petak || [];
+                    const mPenyadaps = originalPenyadapList.filter(p => mPetaks.includes(p.petak));
+                    const mPetakList = originalPetakList.filter(b => mPetaks.includes(b.kode));
+
+                    const totalLuas = mPetakList.reduce((sum, b) => sum + (parseFloat(b.luas) || 0), 0);
+                    const totalPohon = mPetakList.reduce((sum, b) => sum + (parseInt(b.pohon) || 0), 0);
+                    const activePohon = mPenyadaps.reduce((sum, p) => sum + (parseInt(p.pohon) || 0), 0);
+                    const nganggurPohon = Math.max(0, totalPohon - activePohon);
+
+                    let actualProd = 0;
+                    mPenyadaps.forEach(p => {
+                        actualProd += prodPerPenyadap[p.nama] || 0;
+                    });
+
+                    let totalTarget = 0;
+                    mPetaks.forEach(petakKode => {
+                        const target = targets.find(t => t.petak === petakKode && parseInt(t.tahun) === thisYear);
+                        totalTarget += target ? parseFloat(target.tahunan) : 3600;
+                    });
+
+                    const pct = totalTarget > 0 ? Math.min(100, (actualProd / totalTarget) * 100) : 0;
+                    let grade = 'A', gradeClass = 'a', cardClass = '';
+                    if (pct >= 90)      { grade = 'A'; gradeClass = 'a'; }
+                    else if (pct >= 70) { grade = 'B'; gradeClass = 'b'; }
+                    else if (pct >= 50) { grade = 'C'; gradeClass = 'c'; cardClass = 'kuning'; }
+                    else                { grade = 'D'; gradeClass = 'd'; cardClass = 'merah'; }
+
+                    const barClass = pct >= 90 ? 'over' : pct < 50 ? 'under' : '';
+
+                    html += `
+                    <div class="mandor-kinerja-card ${cardClass}" style="grid-column: 1/-1; border: 2px solid var(--primary); background: linear-gradient(145deg, #fff, #f9fbf9);">
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 16px; margin-bottom: 16px;">
+                            <div>
+                                <h3 style="font-size: 1.4rem; font-weight: 800; color: var(--primary-dark); margin: 0;">${activeMandorObj.nama}</h3>
+                                <div style="font-size: 0.85rem; color: var(--text-muted); font-weight:600; margin-top: 4px;">NIK: ${activeMandorObj.nik || '-'} | Pengawas Lapangan Aktif</div>
+                            </div>
+                            <div class="mk-grade ${gradeClass}" style="font-size: 1.5rem; width: 48px; height: 48px; line-height: 48px;">${grade}</div>
+                        </div>
+                        
+                        <div class="stats-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 20px;">
+                            <div style="background: #edf2f7; padding: 12px; border-radius: 8px;">
+                                <div style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600;">PETAK DIAWASI</div>
+                                <div style="font-size: 1rem; font-weight: 700; color: var(--primary-dark); margin-top: 4px;">${mPetaks.join(', ') || '-'}</div>
+                            </div>
+                            <div style="background: #edf2f7; padding: 12px; border-radius: 8px;">
+                                <div style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600;">PENYADAP AKTIF</div>
+                                <div style="font-size: 1rem; font-weight: 700; color: var(--primary-dark); margin-top: 4px;">${mPenyadaps.length} orang</div>
+                            </div>
+                            <div style="background: #edf2f7; padding: 12px; border-radius: 8px;">
+                                <div style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600;">ALOKASI POHON</div>
+                                <div style="font-size: 1rem; font-weight: 700; color: var(--primary-dark); margin-top: 4px;">${activePohon.toLocaleString('id-ID')} / ${totalPohon.toLocaleString('id-ID')} <small style="font-size:0.75rem; font-weight:500; color:#ef6c00;">(${nganggurPohon} nganggur)</small></div>
+                            </div>
+                            <div style="background: #edf2f7; padding: 12px; border-radius: 8px;">
+                                <div style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600;">LUAS LAHAN</div>
+                                <div style="font-size: 1rem; font-weight: 700; color: var(--primary-dark); margin-top: 4px;">${totalLuas.toFixed(1)} Ha</div>
+                            </div>
+                        </div>
+
+                        <div class="mk-progress-label">
+                            <span>Produksi Getah Kumulatif: <strong>${actualProd.toFixed(1)} kg</strong></span>
+                            <span>Target Mandor: ${totalTarget.toFixed(0)} kg</span>
+                        </div>
+                        <div class="mk-progress-bar-wrap" style="height: 10px;">
+                            <div class="mk-progress-bar ${barClass}" style="width: ${pct.toFixed(1)}%"></div>
+                        </div>
+                        
+                        <div class="mk-stats-row" style="margin-top: 16px; border-top: 1px solid var(--border); padding-top: 16px;">
+                            <div class="mk-stat">
+                                <div class="mk-stat-val">${pct.toFixed(1)}%</div>
+                                <div class="mk-stat-label">Persentase Capaian</div>
+                            </div>
+                            <div class="mk-stat">
+                                <div class="mk-stat-val">${mPenyadaps.reduce((sum, p) => sum + (absPerPenyadap[p.nama]?.total || 0), 0)}x</div>
+                                <div class="mk-stat-label">Total Tidak Hadir Tapper</div>
+                            </div>
+                            <div class="mk-stat">
+                                <div class="mk-stat-val">${Math.max(0, totalTarget - actualProd).toFixed(0)} kg</div>
+                                <div class="mk-stat-label">Kekurangan Target</div>
+                            </div>
+                        </div>
+                    </div>`;
+                }
+            }
+            mandorSummaryDashboard.innerHTML = html;
+        }
+
+        // Update tapper section title
+        const tapperSectionTitle = document.getElementById('tapperSectionTitle');
+        if (tapperSectionTitle) {
+            tapperSectionTitle.textContent = selectedMandorId === 'all' 
+                ? 'Daftar Penyadap yang Diawasi (Semua Mandor)'
+                : `Daftar Penyadap di Bawah Pengawasan ${activeMandorObj ? activeMandorObj.nama : ''}`;
+        }
+
         // Render kartu per penyadap
         const grid = document.getElementById('mandorKinerjaGrid');
         if (grid) {
             grid.innerHTML = '';
-            penyadapList.forEach(p => {
-                const target = targets.find(t => t.petak === p.petak && parseInt(t.tahun) === thisYear);
-                const targetTahunan    = target ? parseFloat(target.tahunan)  : 3600;
-                const targetPerPenyadap = targetTahunan; // target sudah per penyadap
-                const actual = prodPerPenyadap[p.nama] || 0;
-                const pct    = targetPerPenyadap > 0 ? Math.min(100, (actual / targetPerPenyadap) * 100) : 0;
+            if (penyadapList.length === 0) {
+                grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--text-muted);">Tidak ada penyadap aktif di bawah mandor ini.</div>';
+            } else {
+                penyadapList.forEach(p => {
+                    const target = targets.find(t => t.petak === p.petak && parseInt(t.tahun) === thisYear);
+                    const targetTahunan    = target ? parseFloat(target.tahunan)  : 3600;
+                    const targetPerPenyadap = targetTahunan; // target sudah per penyadap
+                    const actual = prodPerPenyadap[p.nama] || 0;
+                    const pct    = targetPerPenyadap > 0 ? Math.min(100, (actual / targetPerPenyadap) * 100) : 0;
 
-                let grade = 'A', gradeClass = 'a', cardClass = '';
-                if (pct >= 90)      { grade = 'A'; gradeClass = 'a'; }
-                else if (pct >= 70) { grade = 'B'; gradeClass = 'b'; }
-                else if (pct >= 50) { grade = 'C'; gradeClass = 'c'; cardClass = 'kuning'; }
-                else                { grade = 'D'; gradeClass = 'd'; cardClass = 'merah'; }
+                    let grade = 'A', gradeClass = 'a', cardClass = '';
+                    if (pct >= 90)      { grade = 'A'; gradeClass = 'a'; }
+                    else if (pct >= 70) { grade = 'B'; gradeClass = 'b'; }
+                    else if (pct >= 50) { grade = 'C'; gradeClass = 'c'; cardClass = 'kuning'; }
+                    else                { grade = 'D'; gradeClass = 'd'; cardClass = 'merah'; }
 
-                const barClass = pct >= 90 ? 'over' : pct < 50 ? 'under' : '';
-                const absInfo = absPerPenyadap[p.nama] || {};
+                    const barClass = pct >= 90 ? 'over' : pct < 50 ? 'under' : '';
+                    const absInfo = absPerPenyadap[p.nama] || {};
 
-                grid.innerHTML += `
-                <div class="mandor-kinerja-card ${cardClass}">
-                    <div class="mk-header">
-                        <div>
-                            <div class="mk-name">${p.nama}</div>
-                            <div class="mk-petak-tag">${p.petak}</div>
+                    grid.innerHTML += `
+                    <div class="mandor-kinerja-card ${cardClass}">
+                        <div class="mk-header">
+                            <div>
+                                <div class="mk-name">${p.nama}</div>
+                                <div class="mk-petak-tag">${p.petak}</div>
+                            </div>
+                            <div class="mk-grade ${gradeClass}">${grade}</div>
                         </div>
-                        <div class="mk-grade ${gradeClass}">${grade}</div>
-                    </div>
-                    <div class="mk-progress-label">
-                        <span>Produksi: <strong>${actual.toFixed(1)} kg</strong></span>
-                        <span>Target: ${targetPerPenyadap.toFixed(0)} kg</span>
-                    </div>
-                    <div class="mk-progress-bar-wrap">
-                        <div class="mk-progress-bar ${barClass}" style="width: ${pct.toFixed(1)}%"></div>
-                    </div>
-                    <div class="mk-stats-row">
-                        <div class="mk-stat">
-                            <div class="mk-stat-val">${pct.toFixed(0)}%</div>
-                            <div class="mk-stat-label">Capaian</div>
+                        <div class="mk-progress-label">
+                            <span>Produksi: <strong>${actual.toFixed(1)} kg</strong></span>
+                            <span>Target: ${targetPerPenyadap.toFixed(0)} kg</span>
                         </div>
-                        <div class="mk-stat">
-                            <div class="mk-stat-val">${absInfo.total || 0}x</div>
-                            <div class="mk-stat-label">Tdk Hadir</div>
+                        <div class="mk-progress-bar-wrap">
+                            <div class="mk-progress-bar ${barClass}" style="width: ${pct.toFixed(1)}%"></div>
                         </div>
-                        <div class="mk-stat">
-                            <div class="mk-stat-val">${(targetPerPenyadap - actual).toFixed(0)} kg</div>
-                            <div class="mk-stat-label">Sisa Target</div>
+                        <div class="mk-stats-row">
+                            <div class="mk-stat">
+                                <div class="mk-stat-val">${pct.toFixed(0)}%</div>
+                                <div class="mk-stat-label">Capaian</div>
+                            </div>
+                            <div class="mk-stat">
+                                <div class="mk-stat-val">${absInfo.total || 0}x</div>
+                                <div class="mk-stat-label">Tdk Hadir</div>
+                            </div>
+                            <div class="mk-stat">
+                                <div class="mk-stat-val">${(targetPerPenyadap - actual).toFixed(0)} kg</div>
+                                <div class="mk-stat-label">Sisa Target</div>
+                            </div>
                         </div>
-                    </div>
-                </div>`;
-            });
+                    </div>`;
+                });
+            }
         }
 
         // Chart: Target Tahunan per Penyadap
@@ -517,11 +731,112 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // ======================== 5. KELOLA MANDOR ========================
     function renderMandorTab() {
-        renderPenyadapTable();
-        renderPetakTable();
-        renderTargetTable();
-        populatePetakDropdowns();
+        renderMandorTable();
     }
+
+    function renderMandorTable() {
+        const list = getMandorList();
+        const tbody = document.getElementById('mandorTbody');
+        if (!tbody) return;
+
+        if (!list.length) {
+            tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--text-muted);padding:30px;">Belum ada data mandor. Klik tombol Tambah Mandor.</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = list.map(m => `
+            <tr>
+                <td><strong>${m.nama}</strong></td>
+                <td><code>${m.nik || '-'}</code></td>
+                <td>${m.petak && m.petak.length ? m.petak.map(p => `<code style="background:#edf2f7;padding:3px 7px;border-radius:4px;font-weight:600;margin-right:4px;">${p}</code>`).join('') : '<span style="color:var(--text-muted);font-style:italic;">Belum ada petak</span>'}</td>
+                <td style="text-align: center;">
+                    <div class="action-btns" style="display:flex; gap:8px; justify-content: center;">
+                        <button class="btn btn-outline" style="padding: 6px 12px; font-size: 0.8rem;" onclick="window.editMandor('${m.id}')">✏️ Edit</button>
+                        <button class="btn btn-outline" style="padding: 6px 12px; font-size: 0.8rem; border-color: var(--danger); color: var(--danger);" onclick="window.deleteMandor('${m.id}')">🗑️ Hapus</button>
+                    </div>
+                </td>
+            </tr>
+        `).join('');
+    }
+
+    function populateMandorPetakCheckboxes(selectedPetaks = []) {
+        const container = document.getElementById('mandorPetakCheckboxes');
+        if (!container) return;
+
+        const petakList = getPetakList();
+        container.innerHTML = petakList.map(b => {
+            const checked = selectedPetaks.includes(b.kode) ? 'checked' : '';
+            return `<label style="display: flex; align-items: center; gap: 8px; font-size: 0.9rem; cursor: pointer; color: var(--text-main);">
+                <input type="checkbox" name="mandorPetak" value="${b.kode}" ${checked}>
+                <span>${b.kode}</span>
+            </label>`;
+        }).join('');
+    }
+
+    document.getElementById('btnTambahMandor')?.addEventListener('click', () => {
+        document.getElementById('editMandorId').value = '';
+        document.getElementById('inputNamaMandor').value = '';
+        document.getElementById('inputNIKMandor').value = '';
+        document.getElementById('modalMandorTitle').textContent = 'Tambah Mandor';
+        populateMandorPetakCheckboxes([]);
+        openModal('modalMandor');
+    });
+
+    window.editMandor = function(id) {
+        const list = getMandorList();
+        const m = list.find(x => x.id === id);
+        if (!m) return;
+
+        document.getElementById('editMandorId').value = m.id;
+        document.getElementById('inputNamaMandor').value = m.nama;
+        document.getElementById('inputNIKMandor').value = m.nik || '';
+        document.getElementById('modalMandorTitle').textContent = 'Edit Data Mandor';
+        populateMandorPetakCheckboxes(m.petak || []);
+        openModal('modalMandor');
+    };
+
+    window.deleteMandor = function(id) {
+        const list = getMandorList();
+        const m = list.find(x => x.id === id);
+        if (!m) return;
+
+        if (confirm(`Apakah Anda yakin ingin menghapus mandor "${m.nama}"?`)) {
+            const newList = list.filter(x => x.id !== id);
+            lsSet(LS.MANDOR, newList);
+            renderMandorTable();
+            showToast('Mandor berhasil dihapus.', 'warning');
+        }
+    };
+
+    document.getElementById('btnSimpanMandor')?.addEventListener('click', () => {
+        const id = document.getElementById('editMandorId').value;
+        const nama = document.getElementById('inputNamaMandor').value.trim();
+        const nik = document.getElementById('inputNIKMandor').value.trim();
+        
+        // Get checked petaks
+        const checkboxes = document.querySelectorAll('input[name="mandorPetak"]:checked');
+        const petak = Array.from(checkboxes).map(cb => cb.value);
+
+        if (!nama) { showToast('Nama mandor wajib diisi!', 'error'); return; }
+
+        let list = getMandorList();
+
+        if (id) {
+            const idx = list.findIndex(x => x.id === id);
+            if (idx >= 0) {
+                list[idx] = { id, nama, nik, petak };
+                showToast(`Data mandor "${nama}" berhasil diubah!`);
+            }
+        } else {
+            const newM = { id: 'm' + Date.now(), nama, nik, petak };
+            list.push(newM);
+            showToast(`Mandor "${nama}" berhasil ditambahkan!`);
+        }
+
+        lsSet(LS.MANDOR, list);
+        closeModal('modalMandor');
+        renderMandorTable();
+    });
 
     function renderPenyadapTable() {
         const list = getPenyadapList();
@@ -638,23 +953,158 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Tambah Petak
     document.getElementById('btnTambahPetak')?.addEventListener('click', () => {
+        document.getElementById('editPetakId').value = '';
         document.getElementById('inputKodePetak').value = '';
         document.getElementById('inputLuasPetak').value = '';
-        openModal('modalTambahPetak');
+        document.getElementById('inputPohonPetak').value = '';
+        document.getElementById('modalPetakTitle').textContent = 'Tambah Petak Baru';
+        openModal('modalPetak');
     });
 
     document.getElementById('btnSimpanPetak')?.addEventListener('click', () => {
+        const id = document.getElementById('editPetakId').value;
         const kode = document.getElementById('inputKodePetak').value.trim();
         const luas = parseFloat(document.getElementById('inputLuasPetak').value) || 0;
+        const pohon = parseInt(document.getElementById('inputPohonPetak').value) || 0;
+
         if (!kode) { showToast('Masukkan kode petak.', 'error'); return; }
-        const list = getPetakList();
-        if (list.find(b => b.kode === kode)) { showToast('Kode petak sudah ada.', 'error'); return; }
-        list.push({ id: 'b' + Date.now(), kode, luas });
+        if (luas <= 0) { showToast('Luas petak harus bernilai positif.', 'error'); return; }
+        if (pohon <= 0) { showToast('Jumlah pohon harus bernilai positif.', 'error'); return; }
+
+        let list = getPetakList();
+        const exists = list.some(b => b.kode.toLowerCase() === kode.toLowerCase() && b.id !== id);
+        if (exists) { showToast('Kode petak sudah terdaftar.', 'error'); return; }
+
+        if (id) {
+            // Edit
+            const idx = list.findIndex(b => b.id === id);
+            if (idx >= 0) {
+                const oldKode = list[idx].kode;
+                list[idx] = { id, kode, luas, pohon };
+
+                // Integrity: update tappers and targets
+                if (oldKode !== kode) {
+                    let tappers = getPenyadapList();
+                    tappers.forEach(t => { if (t.petak === oldKode) t.petak = kode; });
+                    lsSet(LS.PENYADAP, tappers);
+
+                    let targets = getTargetList();
+                    targets.forEach(t => { if (t.petak === oldKode) t.petak = kode; });
+                    lsSet(LS.TARGET, targets);
+                }
+                showToast(`Petak "${kode}" berhasil diubah!`);
+            }
+        } else {
+            // Add new
+            list.push({ id: 'b' + Date.now(), kode, luas, pohon });
+            showToast(`Petak "${kode}" berhasil ditambahkan!`);
+        }
+
         lsSet(LS.PETAK, list);
-        closeModal('modalTambahPetak');
-        renderMandorTab();
-        showToast(`Petak "${kode}" berhasil ditambahkan!`, 'success');
+        closeModal('modalPetak');
+        renderPetakTargetTable();
     });
+
+    window.editPetak = function(id) {
+        const list = getPetakList();
+        const b = list.find(x => x.id === id);
+        if (!b) return;
+
+        document.getElementById('editPetakId').value = b.id;
+        document.getElementById('inputKodePetak').value = b.kode;
+        document.getElementById('inputLuasPetak').value = b.luas;
+        document.getElementById('inputPohonPetak').value = b.pohon || 1000;
+        document.getElementById('modalPetakTitle').textContent = 'Edit Data Petak';
+        openModal('modalPetak');
+    };
+
+    window.deletePetak = function(id) {
+        const list = getPetakList();
+        const b = list.find(x => x.id === id);
+        if (!b) return;
+
+        if (confirm(`Apakah Anda yakin ingin menghapus petak "${b.kode}"?`)) {
+            const newList = list.filter(x => x.id !== id);
+            lsSet(LS.PETAK, newList);
+            renderPetakTargetTable();
+            showToast('Petak berhasil dihapus.', 'warning');
+        }
+    };
+
+    function renderPetakTargetTable() {
+        const petakList = getPetakList();
+        const penyadapList = getPenyadapList();
+        const targets = getTargetList();
+        const tbody = document.getElementById('petakTargetTbody');
+        if (!tbody) return;
+
+        if (!petakList.length) {
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:30px;">Belum ada data petak. Klik tombol Tambah Petak.</td></tr>';
+            return;
+        }
+
+        const thisYear = new Date().getFullYear();
+
+        tbody.innerHTML = petakList.map(b => {
+            const assigned = penyadapList.filter(p => p.petak === b.kode && p.status === 'Aktif');
+            
+            // Calculate trees digarap vs total
+            const treesDigarap = assigned.reduce((sum, p) => sum + (parseInt(p.pohon) || 0), 0);
+            const treesNganggur = Math.max(0, (b.pohon || 1000) - treesDigarap);
+
+            const t = targets.find(x => x.petak === b.kode && parseInt(x.tahun) === thisYear) || { tahunan: 3600 };
+
+            const namesList = assigned.map(p => `${p.nama} (${p.pohon || 0} ph)`).join(', ') || '-';
+
+            return `
+                <tr>
+                    <td><strong>${b.kode}</strong></td>
+                    <td>${b.luas} Ha</td>
+                    <td><strong>${b.pohon || 1000}</strong></td>
+                    <td>
+                        <span style="font-weight:600; color:var(--primary-light);">${treesDigarap}</span>
+                        <div style="font-size:0.75rem; color:var(--text-muted); margin-top:2px;">(${namesList})</div>
+                    </td>
+                    <td><strong style="color:${treesNganggur > 0 ? 'var(--warning)' : 'var(--text-muted)'}">${treesNganggur} pohon</strong></td>
+                    <td><strong>${t.tahunan.toLocaleString('id-ID')} kg</strong></td>
+                    <td style="text-align: center;">
+                        <div class="action-btns" style="display:flex; gap:8px; justify-content: center;">
+                            <button class="btn btn-outline" style="padding: 6px 12px; font-size: 0.8rem;" onclick="window.editPetak('${b.id}')">✏️ Edit</button>
+                            <button class="btn btn-primary" style="padding: 6px 12px; font-size: 0.8rem; background-color: var(--accent);" onclick="window.aturTarget('${b.kode}')">🎯 Target</button>
+                            <button class="btn btn-outline" style="padding: 6px 12px; font-size: 0.8rem; border-color: var(--danger); color: var(--danger);" onclick="window.deletePetak('${b.id}')">🗑️ Hapus</button>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+    }
+
+    // Expose aturTarget to global
+    window.aturTarget = function(petakKode) {
+        const targets = getTargetList();
+        const thisYear = new Date().getFullYear();
+        const target = targets.find(t => t.petak === petakKode && parseInt(t.tahun) === thisYear) || {
+            tahun: thisYear,
+            tahunan: 3600,
+            periode1: 150,
+            periode2: 150
+        };
+
+        const activeWorkers = getActivePenyadap().filter(p => p.petak === petakKode);
+        document.getElementById('targetPetakKode').value = petakKode;
+        document.getElementById('modalTargetPenyadapNames').textContent = activeWorkers.length > 0
+            ? activeWorkers.map(w => w.nama).join(', ')
+            : 'Belum ada penyadap aktif ditugaskan pada petak ini.';
+
+        document.getElementById('targetTahun').value = target.tahun;
+        document.getElementById('targetTahunanTotal').value = target.tahunan;
+        document.getElementById('targetBulan1').value = target.periode1;
+        document.getElementById('targetBulan2').value = target.periode2;
+
+        document.getElementById('modalTargetTitle').textContent = `Set Target Petak: ${petakKode}`;
+        openModal('modalTarget');
+        calcAndShowTargetPerPenyadap();
+    };
 
     // Setting Target
     const targetPetakSel = document.getElementById('targetPetakSelect');
@@ -1002,6 +1452,11 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     // ======================== INITIAL LOAD ========================
+    // Ensure default mandor array exists in localStorage
+    if (!localStorage.getItem(LS.MANDOR)) {
+        lsSet(LS.MANDOR, getMandorList());
+    }
+
     // Set default monitoring date
     const monDateEl = document.getElementById('monitoringDate');
     if (monDateEl) monDateEl.value = todayStr();
@@ -1015,5 +1470,10 @@ document.addEventListener('DOMContentLoaded', function () {
         renderDashboard(records);
         // Also update filter petak dropdown
         populatePetakDropdowns();
+
+        // Render mandor table if active
+        const activeTab = document.querySelector('.sidebar-menu li.active')?.getAttribute('data-tab');
+        if (activeTab === 'mandor') renderMandorTable();
+        else if (activeTab === 'petak-target') renderPetakTargetTable();
     });
 });

@@ -39,6 +39,12 @@
                     <span>Kelola Mandor</span>
                 </a>
             </li>
+            <li data-tab="petak-target">
+                <a href="#petak-target">
+                    <svg viewBox="0 0 24 24"><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"></polygon><line x1="9" y1="3" x2="9" y2="18"></line><line x1="15" y1="6" x2="15" y2="21"></line></svg>
+                    <span>Kelola Petak & Target</span>
+                </a>
+            </li>
             <li data-tab="monitoring">
                 <a href="#monitoring">
                     <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
@@ -87,6 +93,10 @@
             </div>
             
             <div class="header-meta">
+                <a href="mandor.html" target="_blank" class="btn-mobile-link" style="background-color: var(--primary-ultra-light); color: var(--primary); border: 1px solid rgba(45, 106, 79, 0.15);" title="Buka panel pengelolaan mandor lapangan">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle></svg>
+                    Buka Panel Mandor
+                </a>
                 <a href="input.html" target="_blank" class="btn-mobile-link" title="Buka form input versi HP penuh di tab baru">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect><line x1="12" y1="18" x2="12.01" y2="18"></line></svg>
                     Buka Form Mobile
@@ -233,15 +243,36 @@
             <!-- ================= TAB: DASHBOARD PIMPINAN ================= -->
             <div class="tab-content" id="tab-pimpinan">
 
-                <div class="pimpinan-header-info">
+                <div class="pimpinan-header-info" style="align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 20px;">
                     <div class="pimpinan-title-block">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"></path></svg>
                         <div>
-                            <h3>Ringkasan Kinerja Mandor</h3>
-                            <p>Overview evaluasi produktivitas per mandor terhadap target yang ditetapkan</p>
+                            <h3>Dashboard Monitoring Mandor</h3>
+                            <p>Evaluasi produktivitas dan monitoring wilayah kerja mandor lapangan</p>
                         </div>
                     </div>
-                    <div id="pimpinan-period-badge" class="period-badge">Periode Aktif</div>
+                    <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+                        <div class="form-group" style="flex-direction: row; align-items: center; gap: 8px; margin-bottom: 0;">
+                            <label for="filterMandorSelect" style="font-weight: 700; font-size: 0.85rem; color: var(--primary); white-space: nowrap; margin-bottom: 0;">Pilih Mandor:</label>
+                            <select id="filterMandorSelect" class="form-control" style="padding: 6px 12px; min-width: 175px; height: 36px; line-height: 1.2;">
+                                <option value="all">-- Semua Mandor --</option>
+                                <option value="m1">Mandor Wawan</option>
+                                <option value="m2">Mandor Budi</option>
+                                <option value="m3">Mandor Kardi</option>
+                            </select>
+                        </div>
+                        <div id="pimpinan-period-badge" class="period-badge" style="margin-bottom: 0;">Periode Aktif</div>
+                    </div>
+                </div>
+
+                <!-- Section: Dashboard Kinerja Mandor / Ringkasan Mandor -->
+                <div id="mandorSummaryDashboard" class="mandor-kinerja-grid" style="margin-bottom: 24px;">
+                    <!-- Rendered dynamically (3 cards when 'all', or 1 detailed card when specific mandor is selected) -->
+                    <div style="grid-column: 1/-1; text-align: center; padding: 30px; color: var(--text-muted);">Memuat summary kinerja mandor...</div>
+                </div>
+
+                <div class="filter-card" style="margin-bottom: 20px; padding: 12px 20px; background-color: var(--primary-ultra-light); border-left: 4px solid var(--primary-light);">
+                    <h4 style="font-size: 0.95rem; font-weight: 700; color: var(--primary); margin: 0;" id="tapperSectionTitle">Daftar Penyadap yang Diawasi</h4>
                 </div>
 
                 <!-- Mandor Performance Grid -->
@@ -305,11 +336,10 @@
             <!-- ================= TAB: KELOLA MANDOR ================= -->
             <div class="tab-content" id="tab-mandor">
 
-                <!-- Header dengan tombol tambah mandor -->
-                <div class="mandor-mgmt-header">
+                <div class="mandor-mgmt-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
                     <div>
-                        <h3 style="font-size:1.1rem;font-weight:700;color:var(--primary);">Manajemen Mandor & Penyadap</h3>
-                        <p style="font-size:0.85rem;color:var(--text-muted);margin-top:2px;">Setiap mandor membawahi petak dan penyadap di wilayahnya</p>
+                        <h3 style="font-size:1.1rem;font-weight:700;color:var(--primary);">Manajemen Mandor Hutan</h3>
+                        <p style="font-size:0.85rem;color:var(--text-muted);margin-top:2px;">Atur akun mandor lapangan beserta daftar petak hutan yang diawasinya</p>
                     </div>
                     <button class="btn btn-primary" id="btnTambahMandor">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><line x1="23" y1="11" x2="17" y2="11"></line><line x1="20" y1="8" x2="20" y2="14"></line></svg>
@@ -317,10 +347,59 @@
                     </button>
                 </div>
 
-                <!-- Hierarki: Mandor → Petak → Penyadap -->
-                <div id="mandorHierarchyContainer">
-                    <!-- Rendered dynamically -->
-                    <div style="text-align:center;padding:60px;color:var(--text-muted);">Memuat data mandor...</div>
+                <div class="table-card">
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Nama Mandor</th>
+                                    <th>NIK / ID Pegawai</th>
+                                    <th>Petak yang Diawasi</th>
+                                    <th style="width: 150px; text-align: center;">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody id="mandorTbody">
+                                <tr><td colspan="4" style="text-align: center; color: var(--text-muted);">Memuat data mandor...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- ================= TAB: KELOLA PETAK & TARGET ================= -->
+            <div class="tab-content" id="tab-petak-target">
+
+                <div class="petak-mgmt-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                    <div>
+                        <h3 style="font-size:1.1rem;font-weight:700;color:var(--primary);">Manajemen Petak & Target</h3>
+                        <p style="font-size:0.85rem;color:var(--text-muted);margin-top:2px;">Atur kapasitas petak hutan pinus (luas & pohon) dan tetapkan target produksi per petak</p>
+                    </div>
+                    <button class="btn btn-primary" id="btnTambahPetak">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"></polygon></svg>
+                        + Tambah Petak
+                    </button>
+                </div>
+
+                <div class="table-card">
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Kode Petak</th>
+                                    <th>Luas Tanah (Ha)</th>
+                                    <th>Total Pohon</th>
+                                    <th>Pohon Digarap</th>
+                                    <th>Sisa Pohon Nganggur</th>
+                                    <th>Target Tahunan (kg)</th>
+                                    <th style="width: 200px; text-align: center;">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody id="petakTargetTbody">
+                                <tr><td colspan="7" style="text-align: center; color: var(--text-muted);">Memuat data petak dan target...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
 
             </div>
@@ -550,6 +629,12 @@
                 <label for="inputNIKMandor">NIK / ID Pegawai (opsional)</label>
                 <input type="text" id="inputNIKMandor" class="form-control" placeholder="Contoh: 001">
             </div>
+            <div class="form-group" style="margin-bottom: 16px;">
+                <label style="font-weight: 600; color: var(--text-dark);">Pilih Petak yang Diawasi</label>
+                <div id="mandorPetakCheckboxes" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 6px; max-height: 150px; overflow-y: auto; padding: 10px; border: 1px solid var(--border); border-radius: 8px; background: #fff;">
+                    <!-- Dynamically rendered checklist -->
+                </div>
+            </div>
             <div class="modal-footer">
                 <button class="btn btn-outline" data-modal-close="modalMandor">Batal</button>
                 <button class="btn btn-primary" id="btnSimpanMandor">Simpan</button>
@@ -565,14 +650,17 @@
                 <button class="modal-close" data-modal-close="modalPetak">×</button>
             </div>
             <input type="hidden" id="editPetakId">
-            <input type="hidden" id="editPetakMandorId">
             <div class="form-group" style="margin-bottom: 16px;">
                 <label for="inputKodePetak">Kode Petak</label>
                 <input type="text" id="inputKodePetak" class="form-control" placeholder="Contoh: P.07 - B.15">
             </div>
             <div class="form-group" style="margin-bottom: 16px;">
-                <label for="inputLuasPetak">Luas (Hektar)</label>
-                <input type="number" id="inputLuasPetak" class="form-control" placeholder="Contoh: 12.5" step="0.1">
+                <label for="inputLuasPetak">Luas Lahan (Hektar)</label>
+                <input type="number" id="inputLuasPetak" class="form-control" placeholder="Contoh: 12.5" step="0.1" min="0.1">
+            </div>
+            <div class="form-group" style="margin-bottom: 16px;">
+                <label for="inputPohonPetak">Jumlah Pohon di Petak Ini</label>
+                <input type="number" id="inputPohonPetak" class="form-control" placeholder="Contoh: 1200" min="10">
             </div>
             <div class="modal-footer">
                 <button class="btn btn-outline" data-modal-close="modalPetak">Batal</button>
@@ -660,13 +748,8 @@
         </div>
     </div>
 
-    <!-- ============= TOAST NOTIFICATION ============= -->
-    <div id="globalToast" class="global-toast" style="display:none;"></div>
-
-    <script src="assets/js/app.js"></script>
-</body>
-</html>
-
+    <!-- ============= MODAL: TAMBAH PENYADAP BARU ============= -->
+    <div class="modal" id="modalTambahPenyadap">
         <div class="modal-content">
             <div class="modal-header">
                 <span class="modal-title">Tambah Penyadap Baru</span>

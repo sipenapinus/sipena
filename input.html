@@ -160,6 +160,8 @@
             document.body.className = 'embedded-mobile';
             document.getElementById('androidStatusBar').style.display = 'none';
             document.getElementById('appNavbarBack').style.display = 'none';
+            const addPetakBtn = document.getElementById('btnAddPetak');
+            if (addPetakBtn) addPetakBtn.style.display = 'none';
         }
 
         // Update Android clock dynamically if standalone

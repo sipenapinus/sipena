@@ -39,18 +39,61 @@ document.addEventListener('DOMContentLoaded', function () {
     const newPenyadapNameInput = document.getElementById('new_penyadap_name');
     const newPetakNameInput = document.getElementById('new_petak_name');
 
-    // Default static items (always available as fallback)
-    const defaultWorkers = ['Slamet', 'Kardi', 'Sukijo', 'Tukimin', 'Wawan', 'Budi'];
-    const defaultBlocks = ['P.01 - B.01', 'P.02 - B.05', 'P.03 - B.12', 'P.04 - B.08', 'P.05 - B.03', 'P.06 - B.10'];
+    // Helper to load Penyadap list
+    function getPenyadapList() {
+        try {
+            const list = JSON.parse(localStorage.getItem('sipena_penyadap'));
+            if (list && list.length) return list;
+        } catch(e) {}
+        return [
+            { id: 'p1', nama: 'Slamet',  petak: 'P.01 - B.01', status: 'Aktif', pohon: 800 },
+            { id: 'p2', nama: 'Budi',    petak: 'P.02 - B.05', status: 'Aktif', pohon: 1000 },
+            { id: 'p3', nama: 'Sukijo',  petak: 'P.03 - B.12', status: 'Aktif', pohon: 700 },
+            { id: 'p4', nama: 'Tukimin', petak: 'P.04 - B.08', status: 'Aktif', pohon: 900 },
+            { id: 'p5', nama: 'Wawan',   petak: 'P.05 - B.03', status: 'Aktif', pohon: 800 },
+            { id: 'p6', nama: 'Kardi',   petak: 'P.06 - B.10', status: 'Aktif', pohon: 950 },
+        ];
+    }
+
+    // Helper to load Petak list
+    function getPetakList() {
+        try {
+            const list = JSON.parse(localStorage.getItem('sipena_petak'));
+            if (list && list.length) return list;
+        } catch(e) {}
+        return [
+            { id: 'b1', kode: 'P.01 - B.01', luas: 12.5, pohon: 1200 },
+            { id: 'b2', kode: 'P.02 - B.05', luas: 15.0, pohon: 1500 },
+            { id: 'b3', kode: 'P.03 - B.12', luas: 10.0, pohon: 1000 },
+            { id: 'b4', kode: 'P.04 - B.08', luas: 13.0, pohon: 1300 },
+            { id: 'b5', kode: 'P.05 - B.03', luas: 11.5, pohon: 1100 },
+            { id: 'b6', kode: 'P.06 - B.10', luas: 14.0, pohon: 1400 },
+        ];
+    }
+
+    function getSupervisedPetaks() {
+        try {
+            const mandorList = JSON.parse(localStorage.getItem('sipena_mandor')) || [];
+            const activeMandorId = localStorage.getItem('sipena_active_mandor') || 'm1';
+            const activeM = mandorList.find(m => m.id === activeMandorId) || mandorList[0];
+            return activeM ? (activeM.petak || []) : [];
+        } catch(e) {
+            return [];
+        }
+    }
 
     // 1. Fetch options and populate selects
     function loadFormOptions() {
-        // Load custom items added by user locally
-        const customWorkers = JSON.parse(localStorage.getItem('sipena_custom_penyadap')) || [];
-        const customBlocks = JSON.parse(localStorage.getItem('sipena_custom_petak')) || [];
+        const supervised = getSupervisedPetaks();
+        const activeWorkers = getPenyadapList()
+            .filter(p => p.status === 'Aktif' && (supervised.length === 0 || supervised.includes(p.petak)))
+            .map(p => p.nama);
+        const petakCodes = getPetakList()
+            .filter(b => supervised.length === 0 || supervised.includes(b.kode))
+            .map(b => b.kode);
 
-        let workers = [...defaultWorkers, ...customWorkers];
-        let blocks = [...defaultBlocks, ...customBlocks];
+        let workers = [...activeWorkers];
+        let blocks = [...petakCodes];
 
         if (!WEB_APP_URL) {
             // Demo Mode: Populate with local lists
@@ -122,10 +165,16 @@ document.addEventListener('DOMContentLoaded', function () {
     btnSaveNewPenyadap.addEventListener('click', function () {
         const name = newPenyadapNameInput.value.trim();
         if (name) {
-            // Save locally
-            const customWorkers = JSON.parse(localStorage.getItem('sipena_custom_penyadap')) || [];
-            customWorkers.push(name);
-            localStorage.setItem('sipena_custom_penyadap', JSON.stringify(customWorkers));
+            const list = getPenyadapList();
+            const newPenyadap = {
+                id: 'p' + Date.now(),
+                nama: name,
+                petak: selectPetak.value || 'P.01 - B.01',
+                status: 'Aktif',
+                pohon: 800
+            };
+            list.push(newPenyadap);
+            localStorage.setItem('sipena_penyadap', JSON.stringify(list));
 
             // Append and select
             const opt = document.createElement('option');
@@ -142,10 +191,15 @@ document.addEventListener('DOMContentLoaded', function () {
     btnSaveNewPetak.addEventListener('click', function () {
         const block = newPetakNameInput.value.trim();
         if (block) {
-            // Save locally
-            const customBlocks = JSON.parse(localStorage.getItem('sipena_custom_petak')) || [];
-            customBlocks.push(block);
-            localStorage.setItem('sipena_custom_petak', JSON.stringify(customBlocks));
+            const list = getPetakList();
+            const newPetak = {
+                id: 'b' + Date.now(),
+                kode: block,
+                luas: 10.0, // Default 10.0 Hectares
+                pohon: 1000
+            };
+            list.push(newPetak);
+            localStorage.setItem('sipena_petak', JSON.stringify(list));
 
             // Append and select
             const opt = document.createElement('option');
@@ -377,4 +431,10 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         });
     }
+
+    window.addEventListener('message', (e) => {
+        if (e.data?.type === 'SIPENA_SET_ACTIVE_MANDOR') {
+            loadFormOptions();
+        }
+    });
 });
