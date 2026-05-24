@@ -33,6 +33,56 @@ document.addEventListener('DOMContentLoaded', function () {
         try { localStorage.setItem(key, JSON.stringify(val)); } catch {}
     }
 
+    function migrateLocalStorageData() {
+        // 1. Migrate Petak
+        let petakList = lsGet(LS.PETAK);
+        if (petakList && Array.isArray(petakList)) {
+            let updated = false;
+            const defaults = {
+                'P.01 - B.01': 1200,
+                'P.02 - B.05': 1500,
+                'P.03 - B.12': 1000,
+                'P.04 - B.08': 1300,
+                'P.05 - B.03': 1100,
+                'P.06 - B.10': 1400
+            };
+            petakList = petakList.map(b => {
+                if (b.pohon === undefined || b.pohon === null || parseInt(b.pohon) <= 0) {
+                    b.pohon = defaults[b.kode] || 1000;
+                    updated = true;
+                }
+                return b;
+            });
+            if (updated) {
+                lsSet(LS.PETAK, petakList);
+            }
+        }
+
+        // 2. Migrate Penyadap
+        let penyadapList = lsGet(LS.PENYADAP);
+        if (penyadapList && Array.isArray(penyadapList)) {
+            let updated = false;
+            const defaults = {
+                'Slamet': 800,
+                'Budi': 1000,
+                'Sukijo': 700,
+                'Tukimin': 900,
+                'Wawan': 800,
+                'Kardi': 950
+            };
+            penyadapList = penyadapList.map(p => {
+                if (p.pohon === undefined || p.pohon === null || parseInt(p.pohon) <= 0) {
+                    p.pohon = defaults[p.nama] || 800;
+                    updated = true;
+                }
+                return p;
+            });
+            if (updated) {
+                lsSet(LS.PENYADAP, penyadapList);
+            }
+        }
+    }
+
     function getMandorList() {
         return lsGet(LS.MANDOR) || [
             { id: 'm1', nama: 'Mandor Wawan', nik: '001', petak: ['P.01 - B.01', 'P.03 - B.12'] },
@@ -1452,6 +1502,9 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     // ======================== INITIAL LOAD ========================
+    // Run schema migration first
+    migrateLocalStorageData();
+
     // Ensure default mandor array exists in localStorage
     if (!localStorage.getItem(LS.MANDOR)) {
         lsSet(LS.MANDOR, getMandorList());

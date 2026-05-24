@@ -22,6 +22,56 @@ document.addEventListener('DOMContentLoaded', function () {
         try { localStorage.setItem(key, JSON.stringify(val)); } catch {}
     }
 
+    function migrateLocalStorageData() {
+        // 1. Migrate Petak
+        let petakList = lsGet(LS.PETAK);
+        if (petakList && Array.isArray(petakList)) {
+            let updated = false;
+            const defaults = {
+                'P.01 - B.01': 1200,
+                'P.02 - B.05': 1500,
+                'P.03 - B.12': 1000,
+                'P.04 - B.08': 1300,
+                'P.05 - B.03': 1100,
+                'P.06 - B.10': 1400
+            };
+            petakList = petakList.map(b => {
+                if (b.pohon === undefined || b.pohon === null || parseInt(b.pohon) <= 0) {
+                    b.pohon = defaults[b.kode] || 1000;
+                    updated = true;
+                }
+                return b;
+            });
+            if (updated) {
+                lsSet(LS.PETAK, petakList);
+            }
+        }
+
+        // 2. Migrate Penyadap
+        let penyadapList = lsGet(LS.PENYADAP);
+        if (penyadapList && Array.isArray(penyadapList)) {
+            let updated = false;
+            const defaults = {
+                'Slamet': 800,
+                'Budi': 1000,
+                'Sukijo': 700,
+                'Tukimin': 900,
+                'Wawan': 800,
+                'Kardi': 950
+            };
+            penyadapList = penyadapList.map(p => {
+                if (p.pohon === undefined || p.pohon === null || parseInt(p.pohon) <= 0) {
+                    p.pohon = defaults[p.nama] || 800;
+                    updated = true;
+                }
+                return p;
+            });
+            if (updated) {
+                lsSet(LS.PENYADAP, penyadapList);
+            }
+        }
+    }
+
     // Default lists matching main app
     function getMandorList() {
         return lsGet(LS.MANDOR) || [
@@ -60,7 +110,8 @@ document.addEventListener('DOMContentLoaded', function () {
     // Helper to get active mandor info and their supervised petaks
     function getActiveMandor() {
         const mandors = getMandorList();
-        const activeId = localStorage.getItem(LS.ACTIVE_MANDOR) || 'm1';
+        const loggedInId = localStorage.getItem('sipena_logged_in_mandor');
+        const activeId = loggedInId || localStorage.getItem(LS.ACTIVE_MANDOR) || 'm1';
         return mandors.find(m => m.id === activeId) || mandors[0];
     }
 
@@ -114,6 +165,9 @@ document.addEventListener('DOMContentLoaded', function () {
         document.getElementById('inputPetakPenyadap').selectedIndex = 0;
         document.getElementById('inputPohonPenyadap').value = '';
         document.getElementById('inputStatusPenyadap').value = 'Aktif';
+        
+        const infoEl = document.getElementById('infoSisaPohon');
+        if (infoEl) infoEl.textContent = '';
     }
 
     // ======================== MANDOR SELECTOR INITIALIZATION ========================
@@ -291,6 +345,42 @@ document.addEventListener('DOMContentLoaded', function () {
         `).join('');
     }
 
+    function updateModalTreeInfo() {
+        const petakSelect = document.getElementById('inputPetakPenyadap');
+        const infoEl = document.getElementById('infoSisaPohon');
+        const idInput = document.getElementById('editPenyadapId');
+        
+        if (!petakSelect || !infoEl) return;
+        
+        const petakKode = petakSelect.value;
+        const currentPenyadapId = idInput ? idInput.value : '';
+        
+        if (!petakKode) {
+            infoEl.textContent = '';
+            return;
+        }
+        
+        const petakList = getPetakList();
+        const targetPetak = petakList.find(b => b.kode === petakKode);
+        if (!targetPetak) {
+            infoEl.textContent = 'Petak tidak ditemukan';
+            return;
+        }
+        
+        const totalPohon = parseInt(targetPetak.pohon) || 0;
+        const penyadapList = getPenyadapList();
+        
+        // hitung pohon yang dipegang penyadap aktif LAIN
+        const otherActive = penyadapList.filter(x => x.petak === petakKode && x.status === 'Aktif' && x.id !== currentPenyadapId);
+        const allocated = otherActive.reduce((sum, x) => sum + (parseInt(x.pohon) || 0), 0);
+        const sisa = Math.max(0, totalPohon - allocated);
+        
+        infoEl.innerHTML = `🌳 Kapasitas Petak: <strong>${totalPohon.toLocaleString('id-ID')}</strong> pohon | Sisa Idle (Bisa disadap): <strong>${sisa.toLocaleString('id-ID')}</strong> pohon`;
+        
+        // Jika sisa = 0, beri warna merah, jika tidak beri warna hijau
+        infoEl.style.color = sisa > 0 ? '#2e7d32' : '#e53935';
+    }
+
     function populatePetakSelectDropdown() {
         const petakList = getFilteredPetakList();
         const select = document.getElementById('inputPetakPenyadap');
@@ -303,6 +393,18 @@ document.addEventListener('DOMContentLoaded', function () {
 
         select.innerHTML = '<option value="" disabled selected>-- Pilih Petak --</option>' +
             petakList.map(b => `<option value="${b.kode}">${b.kode}</option>`).join('');
+
+        // Wire up change listener
+        if (!select.dataset.listenerAttached) {
+            select.addEventListener('change', updateModalTreeInfo);
+            select.dataset.listenerAttached = "true";
+        }
+
+        const statusSelect = document.getElementById('inputStatusPenyadap');
+        if (statusSelect && !statusSelect.dataset.listenerAttached) {
+            statusSelect.addEventListener('change', updateModalTreeInfo);
+            statusSelect.dataset.listenerAttached = "true";
+        }
     }
 
     window.editPenyadap = function (id) {
@@ -319,6 +421,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
         document.getElementById('modalPenyadapTitle').textContent = 'Edit Data Penyadap';
         openModal('modalPenyadap');
+        updateModalTreeInfo();
     };
 
     window.deletePenyadap = function (id) {
@@ -338,6 +441,7 @@ document.addEventListener('DOMContentLoaded', function () {
         populatePetakSelectDropdown();
         document.getElementById('modalPenyadapTitle').textContent = 'Tambah Penyadap Baru';
         openModal('modalPenyadap');
+        updateModalTreeInfo();
     });
 
     document.getElementById('btnSimpanPenyadap')?.addEventListener('click', () => {
@@ -634,7 +738,120 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
+    // ======================== AUTHENTICATION ========================
+    function checkAuth() {
+        const loggedInId = localStorage.getItem('sipena_logged_in_mandor');
+        const overlay = document.getElementById('loginOverlay');
+        
+        if (!loggedInId) {
+            // Show overlay
+            if (overlay) overlay.style.display = 'flex';
+            
+            // Populate select dropdown
+            const loginSelect = document.getElementById('loginMandorSelect');
+            if (loginSelect) {
+                const mandors = getMandorList();
+                loginSelect.innerHTML = mandors.map(m => `<option value="${m.id}">${m.nama}</option>`).join('');
+            }
+            
+            // Focus PIN field
+            const pinInput = document.getElementById('loginPIN');
+            if (pinInput) {
+                pinInput.value = '';
+                pinInput.focus();
+            }
+            return false;
+        } else {
+            // Hide overlay
+            if (overlay) overlay.style.display = 'none';
+            
+            // Set active mandor in localStorage to match the logged-in user
+            localStorage.setItem(LS.ACTIVE_MANDOR, loggedInId);
+            updateHeaderMandorName(loggedInId);
+            return true;
+        }
+    }
+
+    function handleLoginSubmit() {
+        const select = document.getElementById('loginMandorSelect');
+        const pinInput = document.getElementById('loginPIN');
+        if (!select || !pinInput) return;
+
+        const mandorId = select.value;
+        const pinVal = pinInput.value.trim();
+
+        if (!pinVal) {
+            showToast('Silakan masukkan PIN NIK Anda!', 'error');
+            pinInput.focus();
+            return;
+        }
+
+        const mandors = getMandorList();
+        const targetMandor = mandors.find(m => m.id === mandorId);
+
+        if (!targetMandor) {
+            showToast('Mandor tidak ditemukan!', 'error');
+            return;
+        }
+
+        // Compare entered PIN with NIK
+        if (pinVal === targetMandor.nik) {
+            // Success!
+            localStorage.setItem('sipena_logged_in_mandor', mandorId);
+            localStorage.setItem(LS.ACTIVE_MANDOR, mandorId);
+            
+            // Clean pin
+            pinInput.value = '';
+            
+            // Hide overlay
+            const overlay = document.getElementById('loginOverlay');
+            if (overlay) overlay.style.display = 'none';
+
+            // Show success toast
+            showToast(`Selamat datang kembali, ${targetMandor.nama}!`, 'success');
+            
+            // Re-initialize views
+            updateHeaderMandorName(mandorId);
+            initMandorSelector();
+            
+            // Reload active tab view
+            const activeTab = document.querySelector('.sidebar-menu li.active')?.getAttribute('data-tab') || 'dashboard';
+            renderTabView(activeTab);
+            
+            // Propagate active mandor to iframe
+            propagateMandorToIframe();
+        } else {
+            // Failure!
+            showToast('Gagal! PIN / NIK Mandor salah.', 'error');
+            pinInput.select();
+            pinInput.focus();
+        }
+    }
+
+    // Bind login event listeners
+    document.getElementById('btnSubmitLogin')?.addEventListener('click', handleLoginSubmit);
+    document.getElementById('loginPIN')?.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            handleLoginSubmit();
+        }
+    });
+
+    // Bind logout event listener
+    document.getElementById('btnLogoutMandor')?.addEventListener('click', function(e) {
+        e.preventDefault();
+        if (confirm('Apakah Anda yakin ingin keluar dari panel mandor?')) {
+            localStorage.removeItem('sipena_logged_in_mandor');
+            localStorage.removeItem(LS.ACTIVE_MANDOR);
+            showToast('Anda telah keluar.', 'warning');
+            // Hard reload to reset everything
+            window.location.reload();
+        }
+    });
+
     // ======================== INITIAL DEFAULTS ========================
+    // Run schema migration first
+    migrateLocalStorageData();
+
     // Ensure default arrays exist in localStorage
     if (!localStorage.getItem(LS.PENYADAP)) {
         lsSet(LS.PENYADAP, getPenyadapList());
@@ -646,7 +863,16 @@ document.addEventListener('DOMContentLoaded', function () {
         lsSet(LS.MANDOR, getMandorList());
     }
 
-    // Initial render
-    initMandorSelector();
-    renderDashboardStats();
+    // Initial render / Authentication check
+    if (checkAuth()) {
+        initMandorSelector();
+        renderDashboardStats();
+    } else {
+        // Just populate the login dropdown in case it hasn't been
+        const loginSelect = document.getElementById('loginMandorSelect');
+        if (loginSelect) {
+            const mandors = getMandorList();
+            loginSelect.innerHTML = mandors.map(m => `<option value="${m.id}">${m.nama}</option>`).join('');
+        }
+    }
 });
