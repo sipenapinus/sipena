@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SIPENA PINUS - Input Data Produksi</title>
+    <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body class="standalone-mobile"> <!-- Default to standalone mobile, JS will toggle if embedded -->
+
+    <div class="mobile-frame-container">
+        <div class="android-device">
+            <div class="android-screen">
+                
+                <!-- Status Bar (JS will hide if embedded) -->
+                <div class="android-status-bar" id="androidStatusBar">
+                    <span id="android-clock">09:41</span>
+                    <div class="status-icons">
+                        <span id="network-status-icon">📶 Online</span>
+                        <span>🔋 85%</span>
+                    </div>
+                </div>
+
+                <!-- Offline Banner -->
+                <div class="offline-banner" id="offlineBanner">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="1" y1="1" x2="23" y2="23"></line><path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.5"></path><path d="M5 12.5a10.94 10.94 0 0 1 5.17-2.39"></path><path d="M10.71 5.05A16 16 0 0 1 22.5 8"></path><path d="M1.5 8a15.93 15.93 0 0 1 7.15-2.65"></path><path d="M12 18h.01"></path></svg>
+                    <span>Koneksi terputus. Menyimpan data secara offline.</span>
+                </div>
+
+                <div class="android-app-container">
+                    
+                    <!-- App Navbar -->
+                    <div class="app-navbar">
+                        <!-- Back button (JS will hide if embedded) -->
+                        <a href="index.html" class="app-navbar-back" id="appNavbarBack" title="Ke Dashboard">
+                            <svg viewBox="0 0 24 24" stroke-width="2.5">
+                                <line x1="19" y1="12" x2="5" y2="12"></line>
+                                <polyline points="12 19 5 12 12 5"></polyline>
+                            </svg>
+                        </a>
+                        <div class="app-navbar-title">SIPENA PINUS</div>
+                    </div>
+
+                    <!-- Input Form Body -->
+                    <form class="app-form-body" id="productionForm" autocomplete="off">
+                        
+                        <!-- Tanggal -->
+                        <div class="mobile-form-group">
+                            <label for="tanggal">Tanggal</label>
+                            <input type="date" id="tanggal" name="tanggal" class="mobile-form-control" required>
+                        </div>
+
+                        <!-- Nama Penyadap -->
+                        <div class="mobile-form-group">
+                            <label for="nama_penyadap">Nama Penyadap</label>
+                            <div class="input-with-action">
+                                <select id="nama_penyadap" name="nama_penyadap" class="mobile-form-control" required>
+                                    <option value="" disabled selected>-- Pilih Penyadap --</option>
+                                    <!-- Dynamic Options from JS -->
+                                </select>
+                                <button type="button" class="btn-add-inline" id="btnAddPenyadap" title="Tambah Penyadap Baru">+</button>
+                            </div>
+                        </div>
+
+                        <!-- Petak -->
+                        <div class="mobile-form-group">
+                            <label for="petak">Petak / Blok</label>
+                            <div class="input-with-action">
+                                <select id="petak" name="petak" class="mobile-form-control" required>
+                                    <option value="" disabled selected>-- Pilih Petak --</option>
+                                    <!-- Dynamic Options from JS -->
+                                </select>
+                                <button type="button" class="btn-add-inline" id="btnAddPetak" title="Tambah Petak Baru">+</button>
+                            </div>
+                        </div>
+
+                        <!-- Estimasi Hasil -->
+                        <div class="mobile-form-group">
+                            <label for="estimasi_hasil">Estimasi Hasil (kg)</label>
+                            <input type="number" step="0.1" min="0.1" id="estimasi_hasil" name="estimasi_hasil" class="mobile-form-control" placeholder="0.0" required>
+                        </div>
+
+                        <!-- Kondisi Lapangan -->
+                        <div class="mobile-form-group">
+                            <label for="kondisi_lapangan">Kondisi Lapangan</label>
+                            <select id="kondisi_lapangan" name="kondisi_lapangan" class="mobile-form-control" required>
+                                <option value="Normal" selected>Normal</option>
+                                <option value="Hujan">Hujan</option>
+                                <option value="Pohon Rusak">Pohon Rusak</option>
+                                <option value="Wadah Rusak">Wadah Rusak</option>
+                            </select>
+                        </div>
+
+                        <!-- Kendala -->
+                        <div class="mobile-form-group">
+                            <label for="kendala">Kendala</label>
+                            <input type="text" id="kendala" name="kendala" class="mobile-form-control" placeholder="Isi kendala jika ada (contoh: Wadah bocor)">
+                        </div>
+
+                        <!-- Submit Button -->
+                        <button type="submit" class="btn-submit-mobile" id="btnSubmit">Kirim</button>
+
+                    </form>
+
+                </div>
+
+                <!-- Success Toast Notification -->
+                <div class="toast" id="toast">
+                    <span>✅ Data berhasil disimpan!</span>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Tambah Penyadap -->
+    <div class="modal" id="modalPenyadap">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">Tambah Penyadap Baru</h3>
+                <button type="button" class="modal-close" id="btnClosePenyadapModal">&times;</button>
+            </div>
+            <div class="form-group">
+                <label for="new_penyadap_name">Nama Penyadap</label>
+                <input type="text" id="new_penyadap_name" class="form-control" placeholder="Masukkan nama penyadap...">
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline" id="btnCancelPenyadap">Batal</button>
+                <button type="button" class="btn btn-primary" id="btnSaveNewPenyadap">Simpan</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Tambah Petak -->
+    <div class="modal" id="modalPetak">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">Tambah Petak / Blok</h3>
+                <button type="button" class="modal-close" id="btnClosePetakModal">&times;</button>
+            </div>
+            <div class="form-group">
+                <label for="new_petak_name">Nomor Petak (contoh: P.07 - B.15)</label>
+                <input type="text" id="new_petak_name" class="form-control" placeholder="P.XX - B.XX">
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline" id="btnCancelPetak">Batal</button>
+                <button type="button" class="btn btn-primary" id="btnSaveNewPetak">Simpan</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="assets/js/input.js"></script>
+    <script>
+        // Setup default date to today
+        document.getElementById('tanggal').value = new Date().toISOString().split('T')[0];
+
+        // Detect if embedded inside iframe or has embed=1 query param
+        const isEmbedded = window.location.search.includes('embed=1') || (window.parent && window.parent !== window);
+        if (isEmbedded) {
+            document.body.className = 'embedded-mobile';
+            document.getElementById('androidStatusBar').style.display = 'none';
+            document.getElementById('appNavbarBack').style.display = 'none';
+        }
+
+        // Update Android clock dynamically if standalone
+        function updateClock() {
+            const clockEl = document.getElementById('android-clock');
+            if (clockEl && !isEmbedded) {
+                const now = new Date();
+                const hrs = String(now.getHours()).padStart(2, '0');
+                const mins = String(now.getMinutes()).padStart(2, '0');
+                clockEl.textContent = `${hrs}:${mins}`;
+            }
+        }
+        setInterval(updateClock, 1000);
+        updateClock();
+    </script>
+</body>
+</html>
