@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SIPENA PINUS - Dashboard Monitoring Produksi Getah</title>
+    <meta name="description" content="Sistem Informasi Monitoring Produksi Getah Pinus berbasis Mandor dan Wilayah Sadap">
     <link rel="stylesheet" href="assets/css/style.css">
-    <!-- Chart.js from CDN -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
@@ -13,10 +13,7 @@
     <!-- Sidebar Navigation -->
     <aside id="sidebar">
         <div class="sidebar-brand">
-            <!-- Pine tree SVG logo -->
-            <svg viewBox="0 0 24 24">
-                <path d="M12 2L4 15h5v5h6v-5h5L12 2z" />
-            </svg>
+            <svg viewBox="0 0 24 24"><path d="M12 2L4 15h5v5h6v-5h5L12 2z" /></svg>
             <div>
                 <h1>SIPENA PINUS</h1>
                 <span>Sistem Monitoring Getah</span>
@@ -28,6 +25,24 @@
                 <a href="#dashboard">
                     <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9" rx="1"></rect><rect x="14" y="3" width="7" height="5" rx="1"></rect><rect x="14" y="12" width="7" height="9" rx="1"></rect><rect x="3" y="16" width="7" height="5" rx="1"></rect></svg>
                     <span>Dashboard</span>
+                </a>
+            </li>
+            <li data-tab="pimpinan">
+                <a href="#pimpinan">
+                    <svg viewBox="0 0 24 24"><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" stroke="currentColor" stroke-width="2" fill="none"></path></svg>
+                    <span>Dashboard Pimpinan</span>
+                </a>
+            </li>
+            <li data-tab="mandor">
+                <a href="#mandor">
+                    <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><line x1="23" y1="11" x2="17" y2="11"></line><line x1="20" y1="8" x2="20" y2="14"></line></svg>
+                    <span>Kelola Mandor</span>
+                </a>
+            </li>
+            <li data-tab="monitoring">
+                <a href="#monitoring">
+                    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                    <span>Monitoring Harian</span>
                 </a>
             </li>
             <li data-tab="input-data">
@@ -44,14 +59,14 @@
             </li>
             <li data-tab="laporan">
                 <a href="#laporan">
-                    <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                    <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
                     <span>Laporan & Evaluasi</span>
                 </a>
             </li>
         </ul>
 
         <div class="sidebar-footer">
-            <p>SIPENA PINUS v1.0</p>
+            <p>SIPENA PINUS v2.0</p>
             <p>© 2026 Perhutani</p>
         </div>
     </aside>
@@ -86,7 +101,7 @@
             </div>
         </header>
 
-        <!-- PRINT HEADER (Hidden on Screen, visible on A4 Print) -->
+        <!-- PRINT HEADER -->
         <div class="print-header">
             <h1>LAPORAN PRODUKTIVITAS GETAH PINUS (SIPENA PINUS)</h1>
             <p>Sistem Monitoring Produksi Getah Berbasis Mandor dan Wilayah Sadap</p>
@@ -99,7 +114,7 @@
             <!-- ================= TAB: DASHBOARD ================= -->
             <div class="tab-content active" id="tab-dashboard">
                 
-                <!-- Cloud Status Banner -->
+                <!-- Banners -->
                 <div id="cloudConnectionBanner" style="display:none; margin-bottom:20px; padding:12px; background:#e8f5e9; border:1px solid #c8e6c9; border-radius:8px; font-size:0.875rem; font-weight:600; color:#2e7d32; display:flex; align-items:center; gap:8px;">
                     <span style="animation: pulse 1.5s infinite; width:10px; height:10px; background-color:#2e7d32; border-radius:50%; display:inline-block;"></span>
                     <span>Database Terhubung ke Google Sheets Cloud</span>
@@ -111,7 +126,6 @@
                 
                 <!-- Metric Cards -->
                 <div class="stats-grid">
-                    <!-- Total Produksi -->
                     <div class="card-stat">
                         <div class="stat-icon green">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
@@ -121,7 +135,6 @@
                             <span class="stat-value" id="stat-total-prod">0 kg</span>
                         </div>
                     </div>
-                    <!-- Rata-rata Harian -->
                     <div class="card-stat">
                         <div class="stat-icon green">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg>
@@ -131,7 +144,6 @@
                             <span class="stat-value" id="stat-avg-daily">0 kg</span>
                         </div>
                     </div>
-                    <!-- Penyadap Aktif -->
                     <div class="card-stat">
                         <div class="stat-icon green">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
@@ -141,7 +153,6 @@
                             <span class="stat-value" id="stat-workers">0 orang</span>
                         </div>
                     </div>
-                    <!-- Petak Aktif -->
                     <div class="card-stat">
                         <div class="stat-icon green">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"></polygon></svg>
@@ -151,7 +162,6 @@
                             <span class="stat-value" id="stat-blocks">0 petak</span>
                         </div>
                     </div>
-                    <!-- Kendala Lapangan -->
                     <div class="card-stat">
                         <div class="stat-icon red" id="stat-issues-icon">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
@@ -165,7 +175,6 @@
 
                 <!-- Charts Row 1 -->
                 <div class="charts-grid-row1">
-                    <!-- Chart: Produksi Per Petak -->
                     <div class="card-chart">
                         <div class="chart-header">
                             <div class="chart-title">
@@ -174,11 +183,8 @@
                             </div>
                             <span style="font-size: 0.8rem; color: var(--text-muted); font-weight: 500;">Total Akumulatif (kg)</span>
                         </div>
-                        <div class="chart-container">
-                            <canvas id="chartPetak"></canvas>
-                        </div>
+                        <div class="chart-container"><canvas id="chartPetak"></canvas></div>
                     </div>
-                    <!-- Chart: Produksi Per Penyadap -->
                     <div class="card-chart">
                         <div class="chart-header">
                             <div class="chart-title">
@@ -187,15 +193,12 @@
                             </div>
                             <span style="font-size: 0.8rem; color: var(--text-muted); font-weight: 500;">Total Hasil (kg)</span>
                         </div>
-                        <div class="chart-container">
-                            <canvas id="chartPenyadap"></canvas>
-                        </div>
+                        <div class="chart-container"><canvas id="chartPenyadap"></canvas></div>
                     </div>
                 </div>
 
                 <!-- Charts Row 2 -->
                 <div class="charts-grid-row2">
-                    <!-- Chart: Tren Produksi Harian -->
                     <div class="card-chart">
                         <div class="chart-header">
                             <div class="chart-title">
@@ -203,11 +206,8 @@
                                 Tren Produksi Harian (15 Hari Terakhir)
                             </div>
                         </div>
-                        <div class="chart-container">
-                            <canvas id="chartTren"></canvas>
-                        </div>
+                        <div class="chart-container"><canvas id="chartTren"></canvas></div>
                     </div>
-                    <!-- Chart: Kondisi Lapangan & Kendala -->
                     <div class="card-chart">
                         <div class="chart-header">
                             <div class="chart-title">
@@ -219,15 +219,157 @@
                             <div style="height: 140px; position: relative; width: 100%;">
                                 <canvas id="chartKondisi"></canvas>
                             </div>
-                            <!-- List of latest active issues -->
                             <div style="flex-grow: 1;">
                                 <h4 style="font-size: 0.85rem; font-weight: 700; color: var(--primary); margin-bottom: 8px;">Daftar Kendala Terkini</h4>
                                 <div class="issue-list" id="activeIssuesList">
-                                    <!-- Rendered dynamically -->
                                     <div class="no-issues">Memuat data kendala...</div>
                                 </div>
                             </div>
                         </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ================= TAB: DASHBOARD PIMPINAN ================= -->
+            <div class="tab-content" id="tab-pimpinan">
+
+                <div class="pimpinan-header-info">
+                    <div class="pimpinan-title-block">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"></path></svg>
+                        <div>
+                            <h3>Ringkasan Kinerja Mandor</h3>
+                            <p>Overview evaluasi produktivitas per mandor terhadap target yang ditetapkan</p>
+                        </div>
+                    </div>
+                    <div id="pimpinan-period-badge" class="period-badge">Periode Aktif</div>
+                </div>
+
+                <!-- Mandor Performance Grid -->
+                <div id="mandorKinerjaGrid" class="mandor-kinerja-grid">
+                    <!-- Rendered dynamically -->
+                    <div style="grid-column: 1/-1; text-align: center; padding: 60px; color: var(--text-muted);">Memuat data kinerja mandor...</div>
+                </div>
+
+                <!-- Target Progress Charts -->
+                <div class="charts-grid-row1" style="margin-top: 24px;">
+                    <div class="card-chart">
+                        <div class="chart-header">
+                            <div class="chart-title">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline></svg>
+                                Rekapitulasi Produksi vs Target Tahunan (per Mandor)
+                            </div>
+                        </div>
+                        <div class="chart-container"><canvas id="chartTargetTahunan"></canvas></div>
+                    </div>
+                    <div class="card-chart">
+                        <div class="chart-header">
+                            <div class="chart-title">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                                Target Bulanan Bulan Ini
+                            </div>
+                        </div>
+                        <div class="chart-container"><canvas id="chartTargetBulanan"></canvas></div>
+                    </div>
+                </div>
+
+                <!-- Kehadiran Summary -->
+                <div class="card-chart" style="margin-top: 24px;">
+                    <div class="chart-header">
+                        <div class="chart-title">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle></svg>
+                            Rekap Ketidakhadiran Penyadap (30 Hari Terakhir)
+                        </div>
+                    </div>
+                    <div id="ketidakhadiranTable" class="table-container">
+                        <table id="tblKetidakhadiran">
+                            <thead>
+                                <tr>
+                                    <th>Nama Penyadap</th>
+                                    <th>Petak</th>
+                                    <th>Total Tidak Hadir</th>
+                                    <th>Sakit</th>
+                                    <th>Ke Pertanian</th>
+                                    <th>Hajatan</th>
+                                    <th>Bangunan</th>
+                                    <th>Alasan Lain</th>
+                                </tr>
+                            </thead>
+                            <tbody id="ketidakhadiranTbody">
+                                <tr><td colspan="8" style="text-align:center; color:var(--text-muted);">Memuat data...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ================= TAB: KELOLA MANDOR ================= -->
+            <div class="tab-content" id="tab-mandor">
+
+                <!-- Header dengan tombol tambah mandor -->
+                <div class="mandor-mgmt-header">
+                    <div>
+                        <h3 style="font-size:1.1rem;font-weight:700;color:var(--primary);">Manajemen Mandor & Penyadap</h3>
+                        <p style="font-size:0.85rem;color:var(--text-muted);margin-top:2px;">Setiap mandor membawahi petak dan penyadap di wilayahnya</p>
+                    </div>
+                    <button class="btn btn-primary" id="btnTambahMandor">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><line x1="23" y1="11" x2="17" y2="11"></line><line x1="20" y1="8" x2="20" y2="14"></line></svg>
+                        + Tambah Mandor
+                    </button>
+                </div>
+
+                <!-- Hierarki: Mandor → Petak → Penyadap -->
+                <div id="mandorHierarchyContainer">
+                    <!-- Rendered dynamically -->
+                    <div style="text-align:center;padding:60px;color:var(--text-muted);">Memuat data mandor...</div>
+                </div>
+
+            </div>
+
+            <!-- ================= TAB: MONITORING HARIAN ================= -->
+            <div class="tab-content" id="tab-monitoring">
+
+                <div class="monitoring-header">
+                    <div class="monitoring-date-select">
+                        <label for="monitoringDate">Tanggal Pemantauan</label>
+                        <input type="date" id="monitoringDate" class="form-control" style="min-width: 180px;">
+                    </div>
+                    <div class="monitoring-actions">
+                        <button type="button" class="btn btn-primary" id="btnLoadMonitoring">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                            Tampilkan
+                        </button>
+                        <button type="button" class="btn btn-accent" id="btnSimpanMonitoring">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+                            Simpan Status
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Summary Status Row -->
+                <div class="monitoring-summary" id="monitoringSummary">
+                    <div class="mon-stat hadir">
+                        <div class="mon-stat-val" id="monHadirCount">0</div>
+                        <div class="mon-stat-label">Hadir/Aktif</div>
+                    </div>
+                    <div class="mon-stat tidak-hadir">
+                        <div class="mon-stat-val" id="monTidakHadirCount">0</div>
+                        <div class="mon-stat-label">Tidak Hadir</div>
+                    </div>
+                    <div class="mon-stat sakit">
+                        <div class="mon-stat-val" id="monSakitCount">0</div>
+                        <div class="mon-stat-label">Sakit</div>
+                    </div>
+                    <div class="mon-stat lainnya">
+                        <div class="mon-stat-val" id="monLainnyaCount">0</div>
+                        <div class="mon-stat-label">Alasan Lain</div>
+                    </div>
+                </div>
+
+                <!-- Monitoring Table per Petak -->
+                <div id="monitoringPetakContainer">
+                    <!-- Rendered dynamically per petak -->
+                    <div style="text-align: center; padding: 60px; color: var(--text-muted);">
+                        Pilih tanggal dan klik "Tampilkan" untuk melihat daftar penyadap yang harus dipantau.
                     </div>
                 </div>
 
@@ -241,9 +383,8 @@
                         <div class="filter-card" style="margin-bottom: 0;">
                             <h3 style="font-size: 1.3rem; font-weight: 700; color: var(--primary); margin-bottom: 12px;">Simulasi Input Mandor</h3>
                             <p style="font-size: 0.95rem; line-height: 1.6; color: var(--text-main); margin-bottom: 16px;">
-                                Bagian ini menyimulasikan tampilan aplikasi smartphone **SIPENA PINUS** yang dipegang oleh mandor di lapangan.
+                                Bagian ini menyimulasikan tampilan aplikasi smartphone <strong>SIPENA PINUS</strong> yang dipegang oleh mandor di lapangan.
                             </p>
-                            
                             <h4 style="font-weight: 700; color: var(--primary-light); font-size: 0.9rem; margin-bottom: 8px;">Alur Kerja Form Lapangan:</h4>
                             <ul style="padding-left: 20px; font-size: 0.9rem; color: var(--text-main); display: flex; flex-direction: column; gap: 8px;">
                                 <li>Mandor berkeliling petak untuk memeriksa penyadap.</li>
@@ -255,16 +396,14 @@
                         </div>
                     </div>
 
-                    <!-- Smartphone Simulator Device -->
+                    <!-- Smartphone Simulator -->
                     <div class="mobile-frame-container">
                         <div class="android-device">
                             <div class="android-screen">
-                                <!-- Embed input.html inside smartphone simulator -->
                                 <iframe src="input.html?embed=1" style="width: 100%; height: 100%; border: none; border-radius: 26px;"></iframe>
                             </div>
                         </div>
                     </div>
-
                 </div>
             </div>
 
@@ -272,7 +411,6 @@
             <div class="tab-content" id="tab-peta-wilayah">
                 <div class="map-layout">
                     
-                    <!-- Peta Canvas -->
                     <div class="card-chart map-card">
                         <div class="chart-header">
                             <div class="chart-title">
@@ -280,63 +418,32 @@
                                 Peta Interaktif Wilayah Sadap
                             </div>
                         </div>
-
-                        <!-- Legend -->
                         <div class="map-legend">
-                            <div class="legend-item">
-                                <div class="legend-color hijau"></div>
-                                <span>Produksi Baik (&gt;15 kg/hr)</span>
-                            </div>
-                            <div class="legend-item">
-                                <div class="legend-color kuning"></div>
-                                <span>Produksi Menurun (5 - 15 kg/hr)</span>
-                            </div>
-                            <div class="legend-item">
-                                <div class="legend-color merah"></div>
-                                <span>Perlu Pengecekan (&lt;5 kg/hr / Rusak)</span>
-                            </div>
+                            <div class="legend-item"><div class="legend-color hijau"></div><span>Produksi Baik (&gt;15 kg/hr)</span></div>
+                            <div class="legend-item"><div class="legend-color kuning"></div><span>Produksi Menurun (5 - 15 kg/hr)</span></div>
+                            <div class="legend-item"><div class="legend-color merah"></div><span>Perlu Pengecekan (&lt;5 kg/hr / Rusak)</span></div>
                         </div>
-
-                        <!-- Interactive SVG Map -->
                         <div class="map-canvas-container">
                             <svg class="forest-map-svg" viewBox="0 0 500 400">
-                                <!-- Background forest elements -->
                                 <rect width="500" height="400" fill="#e8f3df" rx="8"></rect>
-                                
-                                <!-- Simulating a winding river -->
                                 <path d="M 0 80 Q 120 180 200 130 T 350 250 T 500 230" class="map-river"></path>
-                                
-                                <!-- Simulating roads -->
                                 <path d="M 100 0 L 100 400 M 0 300 L 500 300" class="map-road"></path>
-
-                                <!-- Forest Block: Petak 1 (P.01 - B.01) -->
                                 <polygon points="30,30 90,30 90,120 30,120" class="map-block" id="block-P01" data-block-id="P.01 - B.01"></polygon>
                                 <text x="60" y="80" class="map-text">P.01</text>
-
-                                <!-- Forest Block: Petak 2 (P.02 - B.05) -->
                                 <polygon points="120,40 220,40 220,100 150,150 120,120" class="map-block" id="block-P02" data-block-id="P.02 - B.05"></polygon>
                                 <text x="170" y="85" class="map-text">P.02</text>
-
-                                <!-- Forest Block: Petak 3 (P.03 - B.12) -->
                                 <polygon points="260,30 380,30 350,140 260,110" class="map-block" id="block-P03" data-block-id="P.03 - B.12"></polygon>
                                 <text x="310" y="80" class="map-text">P.03</text>
-
-                                <!-- Forest Block: Petak 4 (P.04 - B.08) -->
                                 <polygon points="30,160 90,160 90,260 30,260" class="map-block" id="block-P04" data-block-id="P.04 - B.08"></polygon>
                                 <text x="60" y="210" class="map-text">P.04</text>
-
-                                <!-- Forest Block: Petak 5 (P.05 - B.03) -->
                                 <polygon points="230,170 330,170 360,260 260,280" class="map-block" id="block-P05" data-block-id="P.05 - B.03"></polygon>
                                 <text x="290" y="225" class="map-text">P.05</text>
-
-                                <!-- Forest Block: Petak 6 (P.06 - B.10) -->
                                 <polygon points="390,170 470,170 470,280 390,280" class="map-block" id="block-P06" data-block-id="P.06 - B.10"></polygon>
                                 <text x="430" y="230" class="map-text">P.06</text>
                             </svg>
                         </div>
                     </div>
 
-                    <!-- Detail Peta -->
                     <div class="card-chart detail-card" id="mapDetailPanel">
                         <div class="chart-header">
                             <div class="chart-title">
@@ -344,55 +451,30 @@
                                 Informasi Petak Sadap
                             </div>
                         </div>
-
-                        <!-- Empty state when no block selected -->
                         <div class="detail-empty" id="detailEmptyState">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <circle cx="12" cy="12" r="10"></circle>
-                                <polyline points="12 8 12 12 16 14"></polyline>
-                            </svg>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 8 12 12 16 14"></polyline></svg>
                             <p>Silakan klik salah satu petak di peta untuk melihat ringkasan produktivitas harian dan kondisinya.</p>
                         </div>
-
-                        <!-- Content shown when block is selected -->
                         <div class="detail-content" id="detailActiveState" style="display: none;">
                             <div class="detail-header">
                                 <span class="detail-title" id="det-petak-name">P.03 - B.12</span>
                                 <span class="badge-status hijau" id="det-status-badge">Produksi Baik</span>
                             </div>
-
                             <div class="detail-grid">
-                                <div class="detail-item">
-                                    <div class="detail-label">Rata-rata Produksi (30 Hari)</div>
-                                    <div class="detail-val" id="det-avg-prod">12.5 kg</div>
-                                </div>
-                                <div class="detail-item">
-                                    <div class="detail-label">Penyadap Terakhir</div>
-                                    <div class="detail-val" id="det-last-worker">Slamet</div>
-                                </div>
-                                <div class="detail-item">
-                                    <div class="detail-label">Kondisi Lapangan Terakhir</div>
-                                    <div class="detail-val" id="det-last-cond">Normal</div>
-                                </div>
-                                <div class="detail-item">
-                                    <div class="detail-label">Kendala Terakhir</div>
-                                    <div class="detail-val" id="det-last-issue">Tidak ada kendala</div>
-                                </div>
-                                <div class="detail-item" style="border-left-color: var(--text-muted)">
-                                    <div class="detail-label">Tanggal Pemantauan Terakhir</div>
-                                    <div class="detail-val" style="font-size: 0.9rem;" id="det-last-update">08/05/2026</div>
-                                </div>
+                                <div class="detail-item"><div class="detail-label">Rata-rata Produksi (30 Hari)</div><div class="detail-val" id="det-avg-prod">12.5 kg</div></div>
+                                <div class="detail-item"><div class="detail-label">Penyadap Terakhir</div><div class="detail-val" id="det-last-worker">Slamet</div></div>
+                                <div class="detail-item"><div class="detail-label">Kondisi Lapangan Terakhir</div><div class="detail-val" id="det-last-cond">Normal</div></div>
+                                <div class="detail-item"><div class="detail-label">Kendala Terakhir</div><div class="detail-val" id="det-last-issue">Tidak ada kendala</div></div>
+                                <div class="detail-item" style="border-left-color: var(--text-muted)"><div class="detail-label">Tanggal Pemantauan Terakhir</div><div class="detail-val" style="font-size: 0.9rem;" id="det-last-update">08/05/2026</div></div>
                             </div>
                         </div>
                     </div>
-
                 </div>
             </div>
 
-            <!-- ================= TAB: LAPORAN & EVALUASI ================= -->
+            <!-- ================= TAB: LAPORAN ================= -->
             <div class="tab-content" id="tab-laporan">
                 
-                <!-- Filter Card -->
                 <div class="filter-card">
                     <div class="filter-grid">
                         <div class="form-group">
@@ -403,12 +485,6 @@
                             <label for="filter-petak">Filter Petak</label>
                             <select id="filter-petak" class="form-control">
                                 <option value="">Semua Petak</option>
-                                <option value="P.01 - B.01">P.01 - B.01</option>
-                                <option value="P.02 - B.05">P.02 - B.05</option>
-                                <option value="P.03 - B.12">P.03 - B.12</option>
-                                <option value="P.04 - B.08">P.04 - B.08</option>
-                                <option value="P.05 - B.03">P.05 - B.03</option>
-                                <option value="P.06 - B.10">P.06 - B.10</option>
                             </select>
                         </div>
                         <div class="form-group">
@@ -423,21 +499,17 @@
                     </div>
                 </div>
 
-                <!-- Export & Print Actions -->
                 <div class="actions-row">
                     <button type="button" class="btn btn-outline" id="btnExportCSV">
-                        <!-- CSV Export icon -->
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
                         Ekspor CSV
                     </button>
                     <button type="button" class="btn btn-accent" id="btnPrintReport">
-                        <!-- Print icon -->
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
                         Cetak Laporan
                     </button>
                 </div>
 
-                <!-- Table View -->
                 <div class="table-card">
                     <div class="table-container">
                         <table id="reportsTable">
@@ -452,29 +524,203 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                <!-- Rendered dynamically -->
-                                <tr>
-                                    <td colspan="6" style="text-align: center; color: var(--text-muted);">Memuat data laporan...</td>
-                                </tr>
+                                <tr><td colspan="6" style="text-align: center; color: var(--text-muted);">Memuat data laporan...</td></tr>
                             </tbody>
                         </table>
                     </div>
                 </div>
-
             </div>
 
         </div>
-
     </main>
 
-    <script style="display:none;">
-        // Simple CSS animations definition
-        @keyframes pulse {
-            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(46, 125, 50, 0.7); }
-            70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(46, 125, 50, 0); }
-            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(46, 125, 50, 0); }
-        }
-    </script>
+    <!-- ============= MODAL: TAMBAH / EDIT MANDOR ============= -->
+    <div class="modal" id="modalMandor">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span class="modal-title" id="modalMandorTitle">Tambah Mandor</span>
+                <button class="modal-close" data-modal-close="modalMandor">×</button>
+            </div>
+            <input type="hidden" id="editMandorId">
+            <div class="form-group" style="margin-bottom: 16px;">
+                <label for="inputNamaMandor">Nama Mandor</label>
+                <input type="text" id="inputNamaMandor" class="form-control" placeholder="Masukkan nama mandor">
+            </div>
+            <div class="form-group" style="margin-bottom: 16px;">
+                <label for="inputNIKMandor">NIK / ID Pegawai (opsional)</label>
+                <input type="text" id="inputNIKMandor" class="form-control" placeholder="Contoh: 001">
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline" data-modal-close="modalMandor">Batal</button>
+                <button class="btn btn-primary" id="btnSimpanMandor">Simpan</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============= MODAL: TAMBAH / EDIT PETAK ============= -->
+    <div class="modal" id="modalPetak">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span class="modal-title" id="modalPetakTitle">Tambah Petak</span>
+                <button class="modal-close" data-modal-close="modalPetak">×</button>
+            </div>
+            <input type="hidden" id="editPetakId">
+            <input type="hidden" id="editPetakMandorId">
+            <div class="form-group" style="margin-bottom: 16px;">
+                <label for="inputKodePetak">Kode Petak</label>
+                <input type="text" id="inputKodePetak" class="form-control" placeholder="Contoh: P.07 - B.15">
+            </div>
+            <div class="form-group" style="margin-bottom: 16px;">
+                <label for="inputLuasPetak">Luas (Hektar)</label>
+                <input type="number" id="inputLuasPetak" class="form-control" placeholder="Contoh: 12.5" step="0.1">
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline" data-modal-close="modalPetak">Batal</button>
+                <button class="btn btn-primary" id="btnSimpanPetak">Simpan</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============= MODAL: TAMBAH / EDIT PENYADAP ============= -->
+    <div class="modal" id="modalPenyadap">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span class="modal-title" id="modalPenyadapTitle">Tambah Penyadap</span>
+                <button class="modal-close" data-modal-close="modalPenyadap">×</button>
+            </div>
+            <input type="hidden" id="editPenyadapId">
+            <input type="hidden" id="editPenyadapPetakId">
+            <div class="form-group" style="margin-bottom: 16px;">
+                <label for="inputNamaPenyadap">Nama Lengkap Penyadap</label>
+                <input type="text" id="inputNamaPenyadap" class="form-control" placeholder="Masukkan nama penyadap">
+            </div>
+            <div class="form-group" style="margin-bottom: 16px;">
+                <label for="inputStatusPenyadap">Status</label>
+                <select id="inputStatusPenyadap" class="form-control">
+                    <option value="Aktif">Aktif</option>
+                    <option value="Nonaktif">Nonaktif</option>
+                </select>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline" data-modal-close="modalPenyadap">Batal</button>
+                <button class="btn btn-primary" id="btnSimpanPenyadap">Simpan</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============= MODAL: SET TARGET PENYADAP ============= -->
+    <div class="modal" id="modalTarget">
+        <div class="modal-content" style="max-width: 520px;">
+            <div class="modal-header">
+                <span class="modal-title" id="modalTargetTitle">Set Target Produksi</span>
+                <button class="modal-close" data-modal-close="modalTarget">×</button>
+            </div>
+            <input type="hidden" id="targetPetakKode">
+
+            <div class="target-info-box" style="margin-bottom: 16px;">
+                <div class="target-info-label">Penyadap di Petak Ini:</div>
+                <div id="modalTargetPenyadapNames" class="target-info-value">-</div>
+            </div>
+
+            <div class="form-group" style="margin-bottom: 14px;">
+                <label for="targetTahun">Tahun Target</label>
+                <input type="number" id="targetTahun" class="form-control" value="2026" min="2020" max="2030">
+            </div>
+
+            <div class="target-section-title" style="margin-bottom: 10px;">Target Tahunan</div>
+            <div class="form-group" style="margin-bottom: 8px;">
+                <label for="targetTahunanTotal">Target Per Petak / 1 Tahun (kg)</label>
+                <input type="number" id="targetTahunanTotal" class="form-control" placeholder="Contoh: 3600" min="0">
+            </div>
+            <div class="target-derived" id="targetPerPenyadapTahunan" style="display:none; margin-bottom: 14px;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+                <span>Per penyadap: <strong id="nilaiTargetPerPenyadap">-</strong></span>
+            </div>
+
+            <div class="target-section-title" style="margin-bottom: 10px;">Target Bulanan (2 Periode/Bulan)</div>
+            <div class="target-monthly-grid" style="margin-bottom: 8px;">
+                <div class="form-group">
+                    <label for="targetBulan1">Periode 1 (tgl 1–15) (kg)</label>
+                    <input type="number" id="targetBulan1" class="form-control" placeholder="Contoh: 150" min="0">
+                </div>
+                <div class="form-group">
+                    <label for="targetBulan2">Periode 2 (tgl 16–31) (kg)</label>
+                    <input type="number" id="targetBulan2" class="form-control" placeholder="Contoh: 150" min="0">
+                </div>
+            </div>
+            <div class="target-derived" id="targetBulananPerPenyadap" style="display:none; margin-bottom: 8px;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+                <span>Per penyadap: <strong id="nilaiTargetBulananPenyadap">-</strong></span>
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn btn-outline" data-modal-close="modalTarget">Batal</button>
+                <button class="btn btn-primary" id="btnSimpanTarget">💾 Simpan Target</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============= TOAST NOTIFICATION ============= -->
+    <div id="globalToast" class="global-toast" style="display:none;"></div>
+
+    <script src="assets/js/app.js"></script>
+</body>
+</html>
+
+        <div class="modal-content">
+            <div class="modal-header">
+                <span class="modal-title">Tambah Penyadap Baru</span>
+                <button class="modal-close" data-modal-close="modalTambahPenyadap">×</button>
+            </div>
+            <div class="form-group" style="margin-bottom: 16px;">
+                <label for="inputNamaPenyadap">Nama Lengkap</label>
+                <input type="text" id="inputNamaPenyadap" class="form-control" placeholder="Masukkan nama penyadap">
+            </div>
+            <div class="form-group" style="margin-bottom: 16px;">
+                <label for="inputPetakPenyadap">Petak Tugas</label>
+                <select id="inputPetakPenyadap" class="form-control">
+                    <option value="">-- Pilih Petak --</option>
+                </select>
+            </div>
+            <div class="form-group" style="margin-bottom: 16px;">
+                <label for="inputStatusPenyadap">Status</label>
+                <select id="inputStatusPenyadap" class="form-control">
+                    <option value="Aktif">Aktif</option>
+                    <option value="Nonaktif">Nonaktif</option>
+                </select>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline" data-modal-close="modalTambahPenyadap">Batal</button>
+                <button class="btn btn-primary" id="btnSimpanPenyadap">Simpan</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============= MODAL: TAMBAH PETAK ============= -->
+    <div class="modal" id="modalTambahPetak">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span class="modal-title">Tambah Petak Sadap Baru</span>
+                <button class="modal-close" data-modal-close="modalTambahPetak">×</button>
+            </div>
+            <div class="form-group" style="margin-bottom: 16px;">
+                <label for="inputKodePetak">Kode Petak (contoh: P.07 - B.15)</label>
+                <input type="text" id="inputKodePetak" class="form-control" placeholder="Contoh: P.07 - B.15">
+            </div>
+            <div class="form-group" style="margin-bottom: 16px;">
+                <label for="inputLuasPetak">Luas (Hektar)</label>
+                <input type="number" id="inputLuasPetak" class="form-control" placeholder="Contoh: 12.5" step="0.1">
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline" data-modal-close="modalTambahPetak">Batal</button>
+                <button class="btn btn-primary" id="btnSimpanPetak">Simpan</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============= TOAST NOTIFICATION ============= -->
+    <div id="globalToast" class="global-toast" style="display:none;"></div>
+
     <script src="assets/js/app.js"></script>
 </body>
 </html>

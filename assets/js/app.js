@@ -1,211 +1,218 @@
 // assets/js/app.js
-// JavaScript for SIPENA PINUS Dashboard (Google Sheets & Demo Mode)
-
+// SIPENA PINUS v2.0 - Full Feature Dashboard
 // =========================================================================
-// CONFIGURATION: SALIN URL WEB APP GOOGLE APPS SCRIPT ANDA DI SINI
-// Contoh: "https://script.google.com/macros/s/AKfycbz.../exec"
+// KONFIGURASI: Isi URL Google Apps Script Anda di sini
 const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwTelvmwcTnXUKYx_CQKfUg82nltxUNWjHsckbCO9vNj3My_VYl2huNYqmqJZKhzO61Kg/exec";
 // =========================================================================
 
 document.addEventListener('DOMContentLoaded', function () {
 
-    // Elements
-    const sidebar = document.getElementById('sidebar');
-    const menuToggle = document.getElementById('menuToggle');
-    const menuItems = document.querySelectorAll('.sidebar-menu li');
-    const tabContents = document.querySelectorAll('.tab-content');
+    // ======================== STATE MANAGEMENT ========================
+    // Kunci localStorage
+    const LS = {
+        PENYADAP: 'sipena_penyadap',
+        PETAK:    'sipena_petak',
+        TARGET:   'sipena_targets',
+        MONITORING: 'sipena_monitoring',
+        DEMO_DATA: 'sipena_demo_entries',
+        CLOUD_CACHE: 'sipena_last_dashboard_data',
+    };
 
-    const pageTitle = document.getElementById('pageTitle');
-    const pageSubtitle = document.getElementById('pageSubtitle');
-
-    // Banners
-    const cloudConnectionBanner = document.getElementById('cloudConnectionBanner');
-    const demoModeBanner = document.getElementById('demoModeBanner');
-
-    // Stats Elements
-    const statTotalProd = document.getElementById('stat-total-prod');
-    const statAvgDaily = document.getElementById('stat-avg-daily');
-    const statWorkers = document.getElementById('stat-workers');
-    const statBlocks = document.getElementById('stat-blocks');
-    const statIssues = document.getElementById('stat-issues');
-
-    // Filter & Export Elements
-    const btnFilterApply = document.getElementById('btnFilterApply');
-    const btnExportCSV = document.getElementById('btnExportCSV');
-    const btnPrintReport = document.getElementById('btnPrintReport');
-    const printDateSpan = document.getElementById('printDateSpan');
-
-    // Map Panel Elements
-    const detailEmptyState = document.getElementById('detailEmptyState');
-    const detailActiveState = document.getElementById('detailActiveState');
-    const mapBlocks = document.querySelectorAll('.map-block');
-
-    // Global caches and chart instances
-    let charts = {};
+    // State global
     let globalRecords = [];
-    let mapDataCache = [];
+    let mapDataCache  = [];
+    let charts        = {};
+    let monitoringData = {}; // {tanggal: {namapenyadap: {status, keterangan}}}
 
-    // Predefined blocks list
-    const predefinedBlocks = ['P.01 - B.01', 'P.02 - B.05', 'P.03 - B.12', 'P.04 - B.08', 'P.05 - B.03', 'P.06 - B.10'];
-
-    // ================= 1. TAB ROUTING & NAVIGATION =================
-
-    if (menuToggle) {
-        menuToggle.addEventListener('click', function () {
-            sidebar.classList.toggle('active');
-        });
+    // ======================== HELPER: STORAGE ========================
+    function lsGet(key) {
+        try { return JSON.parse(localStorage.getItem(key)); } catch { return null; }
+    }
+    function lsSet(key, val) {
+        try { localStorage.setItem(key, JSON.stringify(val)); } catch {}
     }
 
-    document.addEventListener('click', function (event) {
-        const isClickInside = sidebar.contains(event.target) || menuToggle.contains(event.target);
-        if (!isClickInside && sidebar.classList.contains('active') && window.innerWidth <= 768) {
-            sidebar.classList.remove('active');
+    function getPenyadapList() {
+        return lsGet(LS.PENYADAP) || [
+            { id: 'p1', nama: 'Slamet',  petak: 'P.01 - B.01', status: 'Aktif' },
+            { id: 'p2', nama: 'Budi',    petak: 'P.02 - B.05', status: 'Aktif' },
+            { id: 'p3', nama: 'Sukijo',  petak: 'P.03 - B.12', status: 'Aktif' },
+            { id: 'p4', nama: 'Tukimin', petak: 'P.04 - B.08', status: 'Aktif' },
+            { id: 'p5', nama: 'Wawan',   petak: 'P.05 - B.03', status: 'Aktif' },
+            { id: 'p6', nama: 'Kardi',   petak: 'P.06 - B.10', status: 'Aktif' },
+        ];
+    }
+
+    function getPetakList() {
+        return lsGet(LS.PETAK) || [
+            { id: 'b1', kode: 'P.01 - B.01', luas: 12.5 },
+            { id: 'b2', kode: 'P.02 - B.05', luas: 15.0 },
+            { id: 'b3', kode: 'P.03 - B.12', luas: 10.0 },
+            { id: 'b4', kode: 'P.04 - B.08', luas: 13.0 },
+            { id: 'b5', kode: 'P.05 - B.03', luas: 11.5 },
+            { id: 'b6', kode: 'P.06 - B.10', luas: 14.0 },
+        ];
+    }
+
+    function getTargetList() { return lsGet(LS.TARGET) || []; }
+    function getMonitoringData() { return lsGet(LS.MONITORING) || {}; }
+
+    // Penyadap aktif saja
+    function getActivePenyadap() {
+        return getPenyadapList().filter(p => p.status === 'Aktif');
+    }
+
+    // ======================== HELPER: DATE & FORMAT ========================
+    function todayStr() { return new Date().toISOString().split('T')[0]; }
+
+    function formatDateDMY(ds) {
+        if (!ds || ds === '-') return '-';
+        const p = ds.split(' ')[0].split('-');
+        if (p.length !== 3) return ds;
+        return `${p[2]}/${p[1]}/${p[0]}`;
+    }
+
+    function formatDateLong(ds) {
+        if (!ds) return '-';
+        const d = new Date(ds);
+        return d.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+    }
+
+    function getCurrentMonthName() {
+        return new Date().toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
+    }
+
+    // ======================== HELPER: TOAST ========================
+    let toastTimer = null;
+    function showToast(msg, type = 'success') {
+        const t = document.getElementById('globalToast');
+        if (!t) return;
+        clearTimeout(toastTimer);
+        t.textContent = msg;
+        t.className = `global-toast ${type}`;
+        t.style.display = 'block';
+        toastTimer = setTimeout(() => { t.style.display = 'none'; }, 3500);
+    }
+
+    // ======================== HELPER: MODAL ========================
+    function openModal(id) { document.getElementById(id)?.classList.add('active'); }
+    function closeModal(id) { document.getElementById(id)?.classList.remove('active'); }
+
+    document.querySelectorAll('[data-modal-close]').forEach(btn => {
+        btn.addEventListener('click', () => closeModal(btn.getAttribute('data-modal-close')));
+    });
+
+    // ======================== 1. TAB ROUTING ========================
+    const sidebar     = document.getElementById('sidebar');
+    const menuToggle  = document.getElementById('menuToggle');
+    const menuItems   = document.querySelectorAll('.sidebar-menu li');
+    const tabContents = document.querySelectorAll('.tab-content');
+    const pageTitle   = document.getElementById('pageTitle');
+    const pageSubtitle = document.getElementById('pageSubtitle');
+
+    if (menuToggle) {
+        menuToggle.addEventListener('click', () => sidebar.classList.toggle('active'));
+    }
+    document.addEventListener('click', (e) => {
+        if (sidebar && menuToggle && !sidebar.contains(e.target) && !menuToggle.contains(e.target)) {
+            if (sidebar.classList.contains('active') && window.innerWidth <= 768) {
+                sidebar.classList.remove('active');
+            }
         }
     });
 
     menuItems.forEach(item => {
         item.addEventListener('click', function (e) {
             e.preventDefault();
-
-            const targetTab = this.getAttribute('data-tab');
-
+            const tab = this.getAttribute('data-tab');
             menuItems.forEach(li => li.classList.remove('active'));
             this.classList.add('active');
-
             tabContents.forEach(tc => tc.classList.remove('active'));
-            document.getElementById('tab-' + targetTab).classList.add('active');
-
-            updatePageHeader(targetTab);
-
-            // Render view from cached global records
-            renderTabView(targetTab);
-
-            if (window.innerWidth <= 768) {
-                sidebar.classList.remove('active');
-            }
+            document.getElementById('tab-' + tab)?.classList.add('active');
+            updatePageHeader(tab);
+            renderTabView(tab);
+            if (window.innerWidth <= 768) sidebar.classList.remove('active');
         });
     });
 
-    function updatePageHeader(tabName) {
-        switch (tabName) {
-            case 'dashboard':
-                pageTitle.textContent = "Dashboard Monitoring";
-                pageSubtitle.textContent = "Sistem Monitoring Produksi Getah Berbasis Mandor & Wilayah Sadap";
-                break;
-            case 'input-data':
-                pageTitle.textContent = "Input Data Lapangan";
-                pageSubtitle.textContent = "Formulir Input Data Produksi bagi Mandor di Lapangan";
-                break;
-            case 'peta-wilayah':
-                pageTitle.textContent = "Pemetaan Wilayah Sadap";
-                pageSubtitle.textContent = "Visualisasi Status Produktivitas dan Kondisi Petak Hutan Pinus";
-                break;
-            case 'laporan':
-                pageTitle.textContent = "Laporan & Evaluasi Produksi";
-                pageSubtitle.textContent = "Tabel Rekapitulasi Data dan Ekspor Laporan Produksi";
-                break;
+    const pageTitles = {
+        dashboard:   ['Dashboard Monitoring', 'Sistem Monitoring Produksi Getah Berbasis Mandor & Wilayah Sadap'],
+        pimpinan:    ['Dashboard Pimpinan',   'Evaluasi Kinerja Mandor & Progress Target Produksi'],
+        mandor:      ['Kelola Mandor',         'Manajemen Penyadap, Petak Sadap, dan Target Produksi'],
+        monitoring:  ['Monitoring Harian',     'Pantau Kehadiran & Status Penyadap Setiap Hari'],
+        'input-data':['Input Data Lapangan',  'Formulir Input Data Produksi bagi Mandor di Lapangan'],
+        'peta-wilayah':['Pemetaan Wilayah Sadap', 'Visualisasi Status Produktivitas dan Kondisi Petak Hutan Pinus'],
+        laporan:     ['Laporan & Evaluasi Produksi', 'Tabel Rekapitulasi Data dan Ekspor Laporan Produksi'],
+    };
+
+    function updatePageHeader(tab) {
+        const t = pageTitles[tab] || ['Dashboard', ''];
+        if (pageTitle)    pageTitle.textContent    = t[0];
+        if (pageSubtitle) pageSubtitle.textContent = t[1];
+    }
+
+    function renderTabView(tab) {
+        switch (tab) {
+            case 'dashboard':   renderDashboard(globalRecords); break;
+            case 'pimpinan':    renderPimpinan(globalRecords);  break;
+            case 'mandor':      renderMandorTab();              break;
+            case 'monitoring':  renderMonitoringTab();          break;
+            case 'peta-wilayah': renderMap(globalRecords);      break;
+            case 'laporan':     renderReportTable(globalRecords); break;
         }
     }
 
-    // Render tab views from our current loaded dataset
-    function renderTabView(tabName) {
-        if (tabName === 'dashboard') {
-            renderDashboard(globalRecords);
-        } else if (tabName === 'peta-wilayah') {
-            renderMap(globalRecords);
-        } else if (tabName === 'laporan') {
-            renderReportTable(globalRecords);
-        }
-    }
-
-    // ================= 2. CLIENT-SIDE DATA ENGINE (MOCK & SYNC) =================
-
-    // Generate mock database for initial demo run
+    // ======================== 2. DATA ENGINE ========================
     function getInitialMockData() {
         const mockData = [];
-        const penyadapList = ['Slamet', 'Kardi', 'Sukijo', 'Tukimin', 'Wawan', 'Budi'];
-        const workerBlocks = {
-            'Slamet': 'P.01 - B.01',
-            'Budi': 'P.02 - B.05',
-            'Sukijo': 'P.03 - B.12',
-            'Tukimin': 'P.04 - B.08',
-            'Wawan': 'P.05 - B.03',
-            'Kardi': 'P.06 - B.10'
-        };
+        const penyadapList = getPenyadapList().filter(p => p.status === 'Aktif');
+        const workerMap    = {};
+        penyadapList.forEach(p => { workerMap[p.nama] = p.petak; });
+
         const conditions = ['Normal', 'Hujan', 'Pohon Rusak', 'Wadah Rusak'];
 
         for (let i = 30; i >= 0; i--) {
             const date = new Date();
             date.setDate(date.getDate() - i);
-            const dateString = date.toISOString().split('T')[0];
+            const ds = date.toISOString().split('T')[0];
 
-            // Shuffle workers and pick a random subset (4 to 6 workers daily)
-            const shuffledWorkers = [...penyadapList].sort(() => 0.5 - Math.random());
-            const activeCount = Math.floor(Math.random() * 3) + 4; // 4 to 6
-            const activeWorkers = shuffledWorkers.slice(0, activeCount);
+            const shuffled = [...penyadapList].sort(() => 0.5 - Math.random());
+            const active   = shuffled.slice(0, Math.floor(Math.random() * 3) + 4);
 
-            activeWorkers.forEach(worker => {
-                const petak = workerBlocks[worker];
-                let kondisi = 'Normal';
-                let kendala = '';
-                const condRand = Math.floor(Math.random() * 100);
+            active.forEach(worker => {
+                const petak = workerMap[worker.nama];
+                let kondisi = 'Normal', kendala = '';
+                const r = Math.random() * 100;
 
-                if (worker === 'Wawan') {
-                    // Wawan's block has issues more often in our simulation
-                    if (condRand < 25) {
-                        kondisi = 'Pohon Rusak';
-                        kendala = 'Kulit sadap kering & keras';
-                    } else if (condRand < 40) {
-                        kondisi = 'Wadah Rusak';
-                        kendala = 'Wadah bocor';
-                    } else if (condRand < 55) {
-                        kondisi = 'Hujan';
-                        kendala = 'Air masuk ke wadah';
-                    }
+                if (worker.nama === 'Wawan') {
+                    if (r < 25) { kondisi = 'Pohon Rusak'; kendala = 'Kulit sadap kering'; }
+                    else if (r < 40) { kondisi = 'Wadah Rusak'; kendala = 'Wadah bocor'; }
+                    else if (r < 55) { kondisi = 'Hujan'; kendala = 'Air masuk wadah'; }
                 } else {
-                    if (condRand < 10) {
-                        kondisi = 'Hujan';
-                        kendala = 'Hujan deras, getah encer';
-                    } else if (condRand < 13) {
-                        kondisi = 'Wadah Rusak';
-                        kendala = 'Wadah bocor';
-                    } else if (condRand < 15) {
-                        kondisi = 'Pohon Rusak';
-                        kendala = 'Saluran getah tersumbat';
-                    }
+                    if (r < 10) { kondisi = 'Hujan'; kendala = 'Hujan deras, getah encer'; }
+                    else if (r < 13) { kondisi = 'Wadah Rusak'; kendala = 'Wadah bocor'; }
+                    else if (r < 15) { kondisi = 'Pohon Rusak'; kendala = 'Saluran tersumbat'; }
                 }
 
-                let baseYield = 15.0;
-                if (worker === 'Slamet') {
-                    baseYield = 20.5; // Highly productive block
-                } else if (worker === 'Sukijo') {
-                    // Gradual decline over the 30 days to yellow status
-                    const declineFactor = (30 - i) / 30;
-                    baseYield = 14.0 - (declineFactor * 6.5);
-                } else if (worker === 'Wawan') {
-                    baseYield = 4.5; // Poor yield / red status
-                }
+                let base = 15;
+                if (worker.nama === 'Slamet')  base = 20.5;
+                else if (worker.nama === 'Sukijo') base = 14 - ((30 - i) / 30) * 6.5;
+                else if (worker.nama === 'Wawan') base = 4.5;
 
-                const variance = (Math.random() * 4) - 2; // -2 to +2
-                let estimasiHasil = baseYield + variance;
-
-                if (kondisi === 'Hujan') estimasiHasil *= 0.6;
-                else if (kondisi === 'Pohon Rusak') estimasiHasil *= 0.4;
-                else if (kondisi === 'Wadah Rusak') {
-                    estimasiHasil *= 0.5;
-                    if (!kendala) kendala = 'Wadah bocor';
-                }
-
-                estimasiHasil = Math.max(0.5, parseFloat(estimasiHasil.toFixed(1)));
+                let hasil = base + (Math.random() * 4 - 2);
+                if (kondisi === 'Hujan') hasil *= 0.6;
+                else if (kondisi === 'Pohon Rusak') hasil *= 0.4;
+                else if (kondisi === 'Wadah Rusak') hasil *= 0.5;
+                hasil = Math.max(0.5, parseFloat(hasil.toFixed(1)));
 
                 mockData.push({
                     id: 'mock-' + Math.random().toString(36).substr(2, 9),
-                    tanggal: dateString,
-                    nama_penyadap: worker,
-                    petak: petak,
-                    estimasi_hasil: estimasiHasil,
+                    tanggal: ds,
+                    nama_penyadap: worker.nama,
+                    petak,
+                    estimasi_hasil: hasil,
                     kondisi_lapangan: kondisi,
-                    kendala: kendala,
+                    kendala,
                     timestamp: date.toISOString()
                 });
             });
@@ -213,36 +220,30 @@ document.addEventListener('DOMContentLoaded', function () {
         return mockData;
     }
 
-    // Unified loader supporting local fallback, localStorage caching, and Apps Script API
     function loadAllData(callback) {
+        const cloudBanner = document.getElementById('cloudConnectionBanner');
+        const demoBanner  = document.getElementById('demoModeBanner');
+
         if (!WEB_APP_URL) {
-            // ================= DEMO MODE =================
-            demoModeBanner.style.display = 'flex';
-            if (cloudConnectionBanner) cloudConnectionBanner.style.display = 'none';
-
-            let demoData = JSON.parse(localStorage.getItem('sipena_demo_entries'));
-            if (!demoData || demoData.length === 0) {
-                demoData = getInitialMockData();
-                localStorage.setItem('sipena_demo_entries', JSON.stringify(demoData));
+            if (demoBanner)  demoBanner.style.display  = 'flex';
+            if (cloudBanner) cloudBanner.style.display = 'none';
+            let data = lsGet(LS.DEMO_DATA);
+            if (!data || !data.length) {
+                data = getInitialMockData();
+                lsSet(LS.DEMO_DATA, data);
             }
-            // Sort by date desc
-            demoData.sort((a, b) => new Date(b.tanggal) - new Date(a.tanggal));
-
-            globalRecords = demoData;
-            callback(demoData);
+            data.sort((a, b) => new Date(b.tanggal) - new Date(a.tanggal));
+            globalRecords = data;
+            callback(data);
             return;
         }
 
-        // ================= CLOUD MODE =================
-        demoModeBanner.style.display = 'none';
-        if (cloudConnectionBanner) cloudConnectionBanner.style.display = 'flex';
+        if (demoBanner)  demoBanner.style.display  = 'none';
+        if (cloudBanner) cloudBanner.style.display = 'flex';
 
-        const loadCachedData = () => {
-            console.log("Loading dashboard from local offline cache.");
-            let cached = JSON.parse(localStorage.getItem('sipena_last_dashboard_data'));
-            if (!cached || cached.length === 0) {
-                cached = getInitialMockData(); // Ultimate fallback
-            }
+        const fallback = () => {
+            let cached = lsGet(LS.CLOUD_CACHE);
+            if (!cached || !cached.length) cached = getInitialMockData();
             cached.sort((a, b) => new Date(b.tanggal) - new Date(a.tanggal));
             globalRecords = cached;
             callback(cached);
@@ -250,13 +251,11 @@ document.addEventListener('DOMContentLoaded', function () {
 
         if (navigator.onLine) {
             fetch(WEB_APP_URL)
-                .then(res => res.json())
+                .then(r => r.json())
                 .then(res => {
                     if (res.status === 'success' && res.data) {
-                        const rows = res.data;
-                        // Format types to match (floats, dates, etc.)
-                        const formatted = rows.map(r => ({
-                            id: r.id || 'cloud-' + Math.random().toString(36).substr(2, 9),
+                        const fmt = res.data.map(r => ({
+                            id: r.id || 'c-' + Math.random().toString(36).substr(2,9),
                             tanggal: r.tanggal || '',
                             nama_penyadap: r.nama_penyadap || '',
                             petak: r.petak || '',
@@ -264,329 +263,626 @@ document.addEventListener('DOMContentLoaded', function () {
                             kondisi_lapangan: r.kondisi_lapangan || 'Normal',
                             kendala: r.kendala || ''
                         }));
-
-                        // Sort by date desc
-                        formatted.sort((a, b) => new Date(b.tanggal) - new Date(a.tanggal));
-
-                        // Store in cache for offline use
-                        localStorage.setItem('sipena_last_dashboard_data', JSON.stringify(formatted));
-
-                        globalRecords = formatted;
-                        callback(formatted);
-                    } else {
-                        loadCachedData();
-                    }
+                        fmt.sort((a, b) => new Date(b.tanggal) - new Date(a.tanggal));
+                        lsSet(LS.CLOUD_CACHE, fmt);
+                        globalRecords = fmt;
+                        callback(fmt);
+                    } else { fallback(); }
                 })
-                .catch(err => {
-                    console.error("API request failed:", err);
-                    loadCachedData();
-                });
-        } else {
-            loadCachedData();
-        }
+                .catch(() => fallback());
+        } else { fallback(); }
     }
 
-    // ================= 3. RENDER METRICS & CHARTS =================
-
+    // ======================== 3. DASHBOARD MONITORING ========================
     function renderDashboard(records) {
-        if (!records || records.length === 0) return;
+        if (!records || !records.length) return;
 
-        // --- A. Compute Key Metrics ---
-
-        // 1. Total Produksi
-        const totalProd = records.reduce((sum, r) => sum + r.estimasi_hasil, 0);
-
-        // 2. Average Daily Yield (Sum of yields / count of distinct dates)
+        const total = records.reduce((s, r) => s + r.estimasi_hasil, 0);
         const dailySums = {};
+        records.forEach(r => { dailySums[r.tanggal] = (dailySums[r.tanggal] || 0) + r.estimasi_hasil; });
+        const avg = total / (Object.keys(dailySums).length || 1);
+
+        const d30 = new Date(); d30.setDate(d30.getDate() - 30);
+        const workers = new Set(), blocks = new Set();
         records.forEach(r => {
-            dailySums[r.tanggal] = (dailySums[r.tanggal] || 0) + r.estimasi_hasil;
+            if (new Date(r.tanggal) >= d30) { workers.add(r.nama_penyadap); blocks.add(r.petak); }
         });
-        const datesCount = Object.keys(dailySums).length || 1;
-        const avgDaily = totalProd / datesCount;
+        const issues = records.filter(r => r.kondisi_lapangan !== 'Normal' && new Date(r.tanggal) >= d30).length;
 
-        // 3. Active Workers (last 30 days)
-        const uniqueWorkers = new Set();
-        const thirtyDaysAgo = new Date();
-        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+        animateValue(document.getElementById('stat-total-prod'), total, ' kg');
+        animateValue(document.getElementById('stat-avg-daily'),  avg,   ' kg');
+        animateValue(document.getElementById('stat-workers'),    workers.size || 6, ' orang', true);
+        animateValue(document.getElementById('stat-blocks'),     blocks.size  || 6, ' petak', true);
+        animateValue(document.getElementById('stat-issues'),     issues, ' kasus', true);
 
-        records.forEach(r => {
-            if (new Date(r.tanggal) >= thirtyDaysAgo) {
-                uniqueWorkers.add(r.nama_penyadap);
-            }
-        });
-
-        // 4. Active blocks
-        const uniqueBlocks = new Set();
-        records.forEach(r => {
-            if (new Date(r.tanggal) >= thirtyDaysAgo) {
-                uniqueBlocks.add(r.petak);
-            }
-        });
-
-        // 5. Active issues
-        const issuesCount = records.filter(r => r.kondisi_lapangan !== 'Normal' && new Date(r.tanggal) >= thirtyDaysAgo).length;
-
-        // Update stats widgets with animation
-        animateValue(statTotalProd, totalProd, ' kg');
-        animateValue(statAvgDaily, avgDaily, ' kg');
-        animateValue(statWorkers, uniqueWorkers.size || 6, ' orang');
-        animateValue(statBlocks, uniqueBlocks.size || 6, ' petak');
-        animateValue(statIssues, issuesCount, ' kasus');
-
-        // --- B. Prepare Data for Charts ---
-
-        // Chart 1: Rekap Produksi Per Petak
+        // Chart 1: per petak
         const petakTotals = {};
-        records.forEach(r => {
-            petakTotals[r.petak] = (petakTotals[r.petak] || 0) + r.estimasi_hasil;
-        });
-        // Sort blocks by key name
-        const labelsPetak = Object.keys(petakTotals).sort();
-        const valsPetak = labelsPetak.map(l => parseFloat(petakTotals[l].toFixed(1)));
+        records.forEach(r => { petakTotals[r.petak] = (petakTotals[r.petak] || 0) + r.estimasi_hasil; });
+        const lp = Object.keys(petakTotals).sort();
+        const vp = lp.map(l => +petakTotals[l].toFixed(1));
 
-        // Chart 2: Produksi Per Penyadap (Leaderboard)
-        const workerTotals = {};
-        records.forEach(r => {
-            workerTotals[r.nama_penyadap] = (workerTotals[r.nama_penyadap] || 0) + r.estimasi_hasil;
-        });
-        // Sort workers descending
-        const sortedWorkers = Object.keys(workerTotals).sort((a, b) => workerTotals[b] - workerTotals[a]);
-        const labelsWorkers = sortedWorkers;
-        const valsWorkers = sortedWorkers.map(w => parseFloat(workerTotals[w].toFixed(1)));
+        // Chart 2: per penyadap
+        const wt = {};
+        records.forEach(r => { wt[r.nama_penyadap] = (wt[r.nama_penyadap] || 0) + r.estimasi_hasil; });
+        const lw = Object.keys(wt).sort((a, b) => wt[b] - wt[a]);
+        const vw = lw.map(w => +wt[w].toFixed(1));
 
-        // Chart 3: Tren Harian (last 15 days of records)
-        const labelsTren = Object.keys(dailySums).sort().slice(-15);
-        const valsTren = labelsTren.map(d => parseFloat(dailySums[d].toFixed(1)));
-        const formattedLabelsTren = labelsTren.map(formatDateDMY);
+        // Chart 3: tren harian
+        const lt = Object.keys(dailySums).sort().slice(-15);
+        const vt = lt.map(d => +dailySums[d].toFixed(1));
 
-        // Chart 4: Kondisi Lapangan
-        const conditionCounts = {};
-        records.forEach(r => {
-            conditionCounts[r.kondisi_lapangan] = (conditionCounts[r.kondisi_lapangan] || 0) + 1;
-        });
-        const labelsCond = Object.keys(conditionCounts);
-        const valsCond = labelsCond.map(c => conditionCounts[c]);
+        // Chart 4: kondisi
+        const cc = {};
+        records.forEach(r => { cc[r.kondisi_lapangan] = (cc[r.kondisi_lapangan] || 0) + 1; });
+        const lc = Object.keys(cc), vc = lc.map(k => cc[k]);
 
-        // Recent Issues list
-        const recentIssues = records
-            .filter(r => r.kondisi_lapangan !== 'Normal' && r.kendala)
-            .slice(0, 10);
+        const G = '#1b4332', GL = '#40916c', GA = '#52b788', R = '#e63946', Y = '#f4a261';
 
-        // --- C. Render Charts via Chart.js ---
-        const greenPrimary = '#1b4332';
-        const greenLight = '#40916c';
-        const greenAccent = '#52b788';
-        const redAlert = '#e63946';
-        const yellowWarning = '#f4a261';
+        initChart('chartPetak', 'bar',
+            { labels: lp, datasets: [{ label: 'Total (kg)', data: vp, backgroundColor: GL, borderColor: G, borderWidth: 1.5, borderRadius: 6 }] },
+            { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+        );
+        initChart('chartPenyadap', 'bar',
+            { labels: lw, datasets: [{ label: 'Total (kg)', data: vw, backgroundColor: GA, borderColor: GL, borderWidth: 1.5, borderRadius: 6 }] },
+            { responsive: true, maintainAspectRatio: false, indexAxis: 'y', plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true } } }
+        );
+        initChart('chartTren', 'line',
+            { labels: lt.map(formatDateDMY), datasets: [{ label: 'Produksi (kg)', data: vt, borderColor: G, backgroundColor: 'rgba(45,106,79,0.08)', fill: true, tension: 0.3, borderWidth: 3, pointBackgroundColor: GL, pointBorderColor: '#fff', pointRadius: 4 }] },
+            { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+        );
 
-        // Render Bar Chart 1
-        initOrUpdateChart('chartPetak', 'bar', {
-            labels: labelsPetak,
-            datasets: [{
-                label: 'Total Getah (kg)',
-                data: valsPetak,
-                backgroundColor: greenLight,
-                borderColor: greenPrimary,
-                borderWidth: 1.5,
-                borderRadius: 6
-            }]
-        }, {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: { legend: { display: false } },
-            scales: { y: { beginAtZero: true } }
-        });
+        const condColors = lc.map(c => c === 'Normal' ? GL : c === 'Hujan' ? '#a2d2ff' : c === 'Pohon Rusak' ? R : Y);
+        initChart('chartKondisi', 'doughnut',
+            { labels: lc, datasets: [{ data: vc, backgroundColor: condColors, borderWidth: 2, borderColor: '#fff' }] },
+            { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { boxWidth: 12, font: { family: 'Outfit', size: 11 } } } }, cutout: '60%' }
+        );
 
-        // Render Horizontal Bar Chart 2
-        initOrUpdateChart('chartPenyadap', 'bar', {
-            labels: labelsWorkers,
-            datasets: [{
-                label: 'Total Hasil (kg)',
-                data: valsWorkers,
-                backgroundColor: greenAccent,
-                borderColor: greenLight,
-                borderWidth: 1.5,
-                borderRadius: 6
-            }]
-        }, {
-            responsive: true,
-            maintainAspectRatio: false,
-            indexAxis: 'y',
-            plugins: { legend: { display: false } },
-            scales: { x: { beginAtZero: true } }
-        });
-
-        // Render Line Chart 3
-        initOrUpdateChart('chartTren', 'line', {
-            labels: formattedLabelsTren,
-            datasets: [{
-                label: 'Produksi (kg)',
-                data: valsTren,
-                borderColor: greenPrimary,
-                backgroundColor: 'rgba(45, 106, 79, 0.08)',
-                fill: true,
-                tension: 0.3,
-                borderWidth: 3,
-                pointBackgroundColor: greenLight,
-                pointBorderColor: '#ffffff',
-                pointRadius: 4
-            }]
-        }, {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: { legend: { display: false } },
-            scales: { y: { beginAtZero: true } }
-        });
-
-        // Render Doughnut Chart 4
-        const condColors = labelsCond.map(c => {
-            if (c === 'Normal') return greenLight;
-            if (c === 'Hujan') return '#a2d2ff';
-            if (c === 'Pohon Rusak') return redAlert;
-            if (c === 'Wadah Rusak') return yellowWarning;
-            return '#cbd5e0';
-        });
-
-        initOrUpdateChart('chartKondisi', 'doughnut', {
-            labels: labelsCond,
-            datasets: [{
-                data: valsCond,
-                backgroundColor: condColors,
-                borderWidth: 2,
-                borderColor: '#ffffff'
-            }]
-        }, {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    position: 'right',
-                    labels: { boxWidth: 12, font: { family: 'Outfit', size: 11 } }
-                }
-            },
-            cutout: '60%'
-        });
-
-        // Render Issues HTML List
-        renderRecentIssues(recentIssues);
-    }
-
-    function initOrUpdateChart(canvasId, type, data, options) {
-        if (charts[canvasId]) {
-            charts[canvasId].destroy();
-        }
-        const ctx = document.getElementById(canvasId).getContext('2d');
-        charts[canvasId] = new Chart(ctx, { type, data, options });
+        renderRecentIssues(records.filter(r => r.kondisi_lapangan !== 'Normal' && r.kendala).slice(0, 10));
     }
 
     function renderRecentIssues(issues) {
-        const listContainer = document.getElementById('activeIssuesList');
-        listContainer.innerHTML = '';
+        const el = document.getElementById('activeIssuesList');
+        if (!el) return;
+        if (!issues.length) { el.innerHTML = '<div class="no-issues">Tidak ada kendala aktif dalam 30 hari terakhir.</div>'; return; }
+        el.innerHTML = issues.map(item => {
+            const crit = item.kondisi_lapangan === 'Pohon Rusak' || item.kondisi_lapangan === 'Wadah Rusak';
+            return `<div class="issue-item ${crit ? '' : 'kuning'}">
+                <div class="issue-meta"><span>${item.petak}</span><span>${formatDateDMY(item.tanggal)}</span></div>
+                <div class="issue-desc">${item.kendala}</div>
+                <div class="issue-context">Kondisi: <strong>${item.kondisi_lapangan}</strong> | Penyadap: <strong>${item.nama_penyadap}</strong></div>
+            </div>`;
+        }).join('');
+    }
 
-        if (issues.length === 0) {
-            listContainer.innerHTML = '<div class="no-issues">Tidak ada kendala aktif dalam 30 hari terakhir.</div>';
+    // ======================== 4. DASHBOARD PIMPINAN ========================
+    function renderPimpinan(records) {
+        const badge = document.getElementById('pimpinan-period-badge');
+        if (badge) badge.textContent = `Periode: ${getCurrentMonthName()}`;
+
+        const penyadapList = getActivePenyadap();
+        const petakList    = getPetakList();
+        const targets      = getTargetList();
+        const monitoring   = getMonitoringData();
+
+        const now = new Date();
+        const thisYear  = now.getFullYear();
+        const thisMonth = now.getMonth();
+
+        // Hitung total produksi per penyadap
+        const prodPerPenyadap = {};
+        penyadapList.forEach(p => { prodPerPenyadap[p.nama] = 0; });
+        records.forEach(r => {
+            if (prodPerPenyadap.hasOwnProperty(r.nama_penyadap)) {
+                prodPerPenyadap[r.nama_penyadap] += r.estimasi_hasil;
+            }
+        });
+
+        // Hitung ketidakhadiran per penyadap
+        const absPerPenyadap = {};
+        penyadapList.forEach(p => { absPerPenyadap[p.nama] = { total: 0, Sakit: 0, 'Ke Pertanian': 0, Hajatan: 0, Bangunan: 0, Lainnya: 0 }; });
+        Object.entries(monitoring).forEach(([tgl, dayData]) => {
+            const d = new Date(tgl);
+            if ((now - d) / 86400000 <= 30) {
+                Object.entries(dayData).forEach(([nama, info]) => {
+                    if (absPerPenyadap[nama] && info.status && info.status !== 'Hadir') {
+                        absPerPenyadap[nama].total++;
+                        const key = absPerPenyadap[nama].hasOwnProperty(info.status) ? info.status : 'Lainnya';
+                        absPerPenyadap[nama][key]++;
+                    }
+                });
+            }
+        });
+
+        // Render kartu per penyadap
+        const grid = document.getElementById('mandorKinerjaGrid');
+        if (grid) {
+            grid.innerHTML = '';
+            penyadapList.forEach(p => {
+                const target = targets.find(t => t.petak === p.petak && parseInt(t.tahun) === thisYear);
+                const targetTahunan    = target ? parseFloat(target.tahunan)  : 3600;
+                const targetPerPenyadap = targetTahunan; // target sudah per penyadap
+                const actual = prodPerPenyadap[p.nama] || 0;
+                const pct    = targetPerPenyadap > 0 ? Math.min(100, (actual / targetPerPenyadap) * 100) : 0;
+
+                let grade = 'A', gradeClass = 'a', cardClass = '';
+                if (pct >= 90)      { grade = 'A'; gradeClass = 'a'; }
+                else if (pct >= 70) { grade = 'B'; gradeClass = 'b'; }
+                else if (pct >= 50) { grade = 'C'; gradeClass = 'c'; cardClass = 'kuning'; }
+                else                { grade = 'D'; gradeClass = 'd'; cardClass = 'merah'; }
+
+                const barClass = pct >= 90 ? 'over' : pct < 50 ? 'under' : '';
+                const absInfo = absPerPenyadap[p.nama] || {};
+
+                grid.innerHTML += `
+                <div class="mandor-kinerja-card ${cardClass}">
+                    <div class="mk-header">
+                        <div>
+                            <div class="mk-name">${p.nama}</div>
+                            <div class="mk-petak-tag">${p.petak}</div>
+                        </div>
+                        <div class="mk-grade ${gradeClass}">${grade}</div>
+                    </div>
+                    <div class="mk-progress-label">
+                        <span>Produksi: <strong>${actual.toFixed(1)} kg</strong></span>
+                        <span>Target: ${targetPerPenyadap.toFixed(0)} kg</span>
+                    </div>
+                    <div class="mk-progress-bar-wrap">
+                        <div class="mk-progress-bar ${barClass}" style="width: ${pct.toFixed(1)}%"></div>
+                    </div>
+                    <div class="mk-stats-row">
+                        <div class="mk-stat">
+                            <div class="mk-stat-val">${pct.toFixed(0)}%</div>
+                            <div class="mk-stat-label">Capaian</div>
+                        </div>
+                        <div class="mk-stat">
+                            <div class="mk-stat-val">${absInfo.total || 0}x</div>
+                            <div class="mk-stat-label">Tdk Hadir</div>
+                        </div>
+                        <div class="mk-stat">
+                            <div class="mk-stat-val">${(targetPerPenyadap - actual).toFixed(0)} kg</div>
+                            <div class="mk-stat-label">Sisa Target</div>
+                        </div>
+                    </div>
+                </div>`;
+            });
+        }
+
+        // Chart: Target Tahunan per Penyadap
+        const names  = penyadapList.map(p => p.nama);
+        const actuals = names.map(n => +(prodPerPenyadap[n] || 0).toFixed(1));
+        const tgts   = penyadapList.map(p => {
+            const t = targets.find(x => x.petak === p.petak && parseInt(x.tahun) === thisYear);
+            return t ? parseFloat(t.tahunan) : 3600;
+        });
+
+        initChart('chartTargetTahunan', 'bar', {
+            labels: names,
+            datasets: [
+                { label: 'Produksi Aktual (kg)', data: actuals, backgroundColor: '#40916c', borderRadius: 6 },
+                { label: 'Target Tahunan (kg)',  data: tgts,    backgroundColor: 'rgba(27,67,50,0.15)', borderColor: '#1b4332', borderWidth: 2, borderRadius: 6 }
+            ]
+        }, { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top' } }, scales: { y: { beginAtZero: true } } });
+
+        // Chart: Target Bulanan bulan ini (Periode 1 & 2)
+        const p1Actuals = penyadapList.map(p => {
+            return records.filter(r => {
+                const d = new Date(r.tanggal);
+                return r.nama_penyadap === p.nama && d.getFullYear() === thisYear && d.getMonth() === thisMonth && d.getDate() <= 15;
+            }).reduce((s, r) => s + r.estimasi_hasil, 0);
+        });
+        const p2Actuals = penyadapList.map(p => {
+            return records.filter(r => {
+                const d = new Date(r.tanggal);
+                return r.nama_penyadap === p.nama && d.getFullYear() === thisYear && d.getMonth() === thisMonth && d.getDate() > 15;
+            }).reduce((s, r) => s + r.estimasi_hasil, 0);
+        });
+        const p1Targets = penyadapList.map(p => {
+            const t = targets.find(x => x.petak === p.petak && parseInt(x.tahun) === thisYear);
+            return t ? parseFloat(t.periode1) : 150;
+        });
+        const p2Targets = penyadapList.map(p => {
+            const t = targets.find(x => x.petak === p.petak && parseInt(x.tahun) === thisYear);
+            return t ? parseFloat(t.periode2) : 150;
+        });
+
+        initChart('chartTargetBulanan', 'bar', {
+            labels: names,
+            datasets: [
+                { label: 'Periode 1 Aktual', data: p1Actuals.map(v => +v.toFixed(1)), backgroundColor: '#52b788', borderRadius: 4 },
+                { label: 'Periode 1 Target', data: p1Targets, backgroundColor: 'rgba(82,183,136,0.2)', borderColor: '#52b788', borderWidth: 1.5, borderRadius: 4 },
+                { label: 'Periode 2 Aktual', data: p2Actuals.map(v => +v.toFixed(1)), backgroundColor: '#f4a261', borderRadius: 4 },
+                { label: 'Periode 2 Target', data: p2Targets, backgroundColor: 'rgba(244,162,97,0.2)', borderColor: '#f4a261', borderWidth: 1.5, borderRadius: 4 },
+            ]
+        }, { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top' } }, scales: { y: { beginAtZero: true } } });
+
+        // Tabel ketidakhadiran
+        const tbody = document.getElementById('ketidakhadiranTbody');
+        if (tbody) {
+            tbody.innerHTML = '';
+            penyadapList.forEach(p => {
+                const abs = absPerPenyadap[p.nama] || {};
+                tbody.innerHTML += `<tr>
+                    <td><strong>${p.nama}</strong></td>
+                    <td><code style="background:#edf2f7;padding:3px 7px;border-radius:4px;">${p.petak}</code></td>
+                    <td><strong style="color:${abs.total > 5 ? 'var(--danger)' : 'var(--text-dark)'}">${abs.total || 0}x</strong></td>
+                    <td>${abs['Sakit'] || 0}x</td>
+                    <td>${abs['Ke Pertanian'] || 0}x</td>
+                    <td>${abs['Hajatan'] || 0}x</td>
+                    <td>${abs['Bangunan'] || 0}x</td>
+                    <td>${abs['Lainnya'] || 0}x</td>
+                </tr>`;
+            });
+        }
+    }
+
+    // ======================== 5. KELOLA MANDOR ========================
+    function renderMandorTab() {
+        renderPenyadapTable();
+        renderPetakTable();
+        renderTargetTable();
+        populatePetakDropdowns();
+    }
+
+    function renderPenyadapTable() {
+        const list = getPenyadapList();
+        const tbody = document.getElementById('penyadapTbody');
+        if (!tbody) return;
+        tbody.innerHTML = list.length ? list.map(p => `
+            <tr>
+                <td><strong>${p.nama}</strong></td>
+                <td><code style="background:#edf2f7;padding:3px 7px;border-radius:4px;">${p.petak}</code></td>
+                <td><span class="status-badge-${p.status === 'Aktif' ? 'aktif' : 'nonaktif'}">${p.status}</span></td>
+                <td>
+                    <button class="btn-icon" title="Hapus" onclick="deletePenyadap('${p.id}')">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14H6L5 6"></path></svg>
+                    </button>
+                </td>
+            </tr>`).join('') : '<tr><td colspan="4" style="text-align:center;color:var(--text-muted);">Belum ada data penyadap</td></tr>';
+    }
+
+    function renderPetakTable() {
+        const list  = getPetakList();
+        const penyadapList = getPenyadapList();
+        const tbody = document.getElementById('petakTbody');
+        if (!tbody) return;
+        tbody.innerHTML = list.length ? list.map(b => {
+            const assigned = penyadapList.filter(p => p.petak === b.kode).map(p => p.nama).join(', ') || '-';
+            return `<tr>
+                <td><strong>${b.kode}</strong></td>
+                <td>${assigned}</td>
+                <td>${b.luas} Ha</td>
+                <td>
+                    <button class="btn-icon" title="Hapus" onclick="deletePetak('${b.id}')">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14H6L5 6"></path></svg>
+                    </button>
+                </td>
+            </tr>`;
+        }).join('') : '<tr><td colspan="4" style="text-align:center;color:var(--text-muted);">Belum ada data petak</td></tr>';
+    }
+
+    function renderTargetTable() {
+        const targets = getTargetList();
+        const tbody   = document.getElementById('targetTbody');
+        if (!tbody) return;
+        if (!targets.length) {
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text-muted);">Belum ada target tersimpan</td></tr>';
+            return;
+        }
+        const penyadapList = getPenyadapList();
+        tbody.innerHTML = targets.map(t => {
+            const assigned = penyadapList.filter(p => p.petak === t.petak && p.status === 'Aktif');
+            const perPenyadap = assigned.length > 0 ? (parseFloat(t.tahunan) / assigned.length).toFixed(0) : t.tahunan;
+            return `<tr>
+                <td><code style="background:#edf2f7;padding:3px 7px;border-radius:4px;">${t.petak}</code></td>
+                <td>${t.tahun}</td>
+                <td><strong>${parseFloat(t.tahunan).toLocaleString('id')} kg</strong></td>
+                <td>${parseFloat(perPenyadap).toLocaleString('id')} kg</td>
+                <td>${parseFloat(t.periode1).toLocaleString('id')} kg</td>
+                <td>${parseFloat(t.periode2).toLocaleString('id')} kg</td>
+            </tr>`;
+        }).join('');
+    }
+
+    function populatePetakDropdowns() {
+        const petakList = getPetakList();
+        const opts = '<option value="">-- Pilih Petak --</option>' + petakList.map(b => `<option value="${b.kode}">${b.kode}</option>`).join('');
+        ['targetPetakSelect', 'inputPetakPenyadap', 'filter-petak'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) {
+                if (id === 'filter-petak') {
+                    el.innerHTML = '<option value="">Semua Petak</option>' + petakList.map(b => `<option value="${b.kode}">${b.kode}</option>`).join('');
+                } else {
+                    el.innerHTML = opts;
+                }
+            }
+        });
+    }
+
+    // Expose hapus ke global
+    window.deletePenyadap = function(id) {
+        if (!confirm('Hapus penyadap ini?')) return;
+        let list = getPenyadapList().filter(p => p.id !== id);
+        lsSet(LS.PENYADAP, list);
+        renderMandorTab();
+        showToast('Penyadap dihapus.', 'warning');
+    };
+    window.deletePetak = function(id) {
+        if (!confirm('Hapus petak ini?')) return;
+        let list = getPetakList().filter(b => b.id !== id);
+        lsSet(LS.PETAK, list);
+        renderMandorTab();
+        showToast('Petak dihapus.', 'warning');
+    };
+
+    // Tambah Penyadap
+    document.getElementById('btnTambahPenyadap')?.addEventListener('click', () => {
+        document.getElementById('inputNamaPenyadap').value = '';
+        document.getElementById('inputPetakPenyadap').value = '';
+        document.getElementById('inputStatusPenyadap').value = 'Aktif';
+        populatePetakDropdowns();
+        openModal('modalTambahPenyadap');
+    });
+
+    document.getElementById('btnSimpanPenyadap')?.addEventListener('click', () => {
+        const nama   = document.getElementById('inputNamaPenyadap').value.trim();
+        const petak  = document.getElementById('inputPetakPenyadap').value;
+        const status = document.getElementById('inputStatusPenyadap').value;
+        if (!nama || !petak) { showToast('Isi nama dan petak terlebih dahulu.', 'error'); return; }
+        const list = getPenyadapList();
+        list.push({ id: 'p' + Date.now(), nama, petak, status });
+        lsSet(LS.PENYADAP, list);
+        closeModal('modalTambahPenyadap');
+        renderMandorTab();
+        showToast(`Penyadap "${nama}" berhasil ditambahkan!`, 'success');
+    });
+
+    // Tambah Petak
+    document.getElementById('btnTambahPetak')?.addEventListener('click', () => {
+        document.getElementById('inputKodePetak').value = '';
+        document.getElementById('inputLuasPetak').value = '';
+        openModal('modalTambahPetak');
+    });
+
+    document.getElementById('btnSimpanPetak')?.addEventListener('click', () => {
+        const kode = document.getElementById('inputKodePetak').value.trim();
+        const luas = parseFloat(document.getElementById('inputLuasPetak').value) || 0;
+        if (!kode) { showToast('Masukkan kode petak.', 'error'); return; }
+        const list = getPetakList();
+        if (list.find(b => b.kode === kode)) { showToast('Kode petak sudah ada.', 'error'); return; }
+        list.push({ id: 'b' + Date.now(), kode, luas });
+        lsSet(LS.PETAK, list);
+        closeModal('modalTambahPetak');
+        renderMandorTab();
+        showToast(`Petak "${kode}" berhasil ditambahkan!`, 'success');
+    });
+
+    // Setting Target
+    const targetPetakSel = document.getElementById('targetPetakSelect');
+    if (targetPetakSel) {
+        targetPetakSel.addEventListener('change', updateTargetInfo);
+    }
+
+    function calcAndShowTargetPerPenyadap() {
+        const petak    = document.getElementById('targetPetakSelect')?.value;
+        const tahunan  = parseFloat(document.getElementById('targetTahunanTotal')?.value) || 0;
+        const p1 = parseFloat(document.getElementById('targetBulan1')?.value) || 0;
+        const p2 = parseFloat(document.getElementById('targetBulan2')?.value) || 0;
+        if (!petak) return;
+
+        const assigned = getActivePenyadap().filter(p => p.petak === petak);
+        const n = assigned.length || 1;
+
+        const elTahunan = document.getElementById('targetPerPenyadapTahunan');
+        const elNilai   = document.getElementById('nilaiTargetPerPenyadap');
+        const elBulanan = document.getElementById('targetBulananPerPenyadap');
+        const elNilaiBul = document.getElementById('nilaiTargetBulananPenyadap');
+
+        if (tahunan > 0 && elTahunan && elNilai) {
+            elTahunan.style.display = 'flex';
+            elNilai.textContent = `${(tahunan / n).toFixed(0)} kg/tahun (${n} penyadap)`;
+        }
+        if ((p1 > 0 || p2 > 0) && elBulanan && elNilaiBul) {
+            elBulanan.style.display = 'flex';
+            elNilaiBul.textContent = `Periode 1: ${(p1 / n).toFixed(0)} kg | Periode 2: ${(p2 / n).toFixed(0)} kg`;
+        }
+    }
+
+    ['targetTahunanTotal', 'targetBulan1', 'targetBulan2'].forEach(id => {
+        document.getElementById(id)?.addEventListener('input', calcAndShowTargetPerPenyadap);
+    });
+
+    function updateTargetInfo() {
+        const petak = document.getElementById('targetPetakSelect')?.value;
+        const infoBox = document.getElementById('targetPenyadapInfo');
+        const namesEl = document.getElementById('targetPenyadapNames');
+        if (!petak || !infoBox || !namesEl) return;
+
+        const assigned = getActivePenyadap().filter(p => p.petak === petak);
+        infoBox.style.display = assigned.length ? 'block' : 'none';
+        namesEl.textContent   = assigned.length ? assigned.map(p => p.nama).join(', ') : '-';
+        calcAndShowTargetPerPenyadap();
+    }
+
+    document.getElementById('btnSimpanTarget')?.addEventListener('click', () => {
+        const petak   = document.getElementById('targetPetakSelect')?.value;
+        const tahun   = document.getElementById('targetTahun')?.value;
+        const tahunan = document.getElementById('targetTahunanTotal')?.value;
+        const p1      = document.getElementById('targetBulan1')?.value;
+        const p2      = document.getElementById('targetBulan2')?.value;
+
+        if (!petak || !tahunan) { showToast('Pilih petak dan isi target tahunan.', 'error'); return; }
+
+        let targets = getTargetList();
+        const idx   = targets.findIndex(t => t.petak === petak && t.tahun === tahun);
+        const entry = { petak, tahun, tahunan: parseFloat(tahunan), periode1: parseFloat(p1) || 0, periode2: parseFloat(p2) || 0 };
+
+        if (idx >= 0) targets[idx] = entry;
+        else targets.push(entry);
+        lsSet(LS.TARGET, targets);
+        renderTargetTable();
+        showToast(`Target petak ${petak} tahun ${tahun} disimpan!`, 'success');
+    });
+
+    // ======================== 6. MONITORING HARIAN ========================
+    function renderMonitoringTab() {
+        const dateEl = document.getElementById('monitoringDate');
+        if (dateEl && !dateEl.value) dateEl.value = todayStr();
+        updateMonitoringCounts();
+    }
+
+    document.getElementById('btnLoadMonitoring')?.addEventListener('click', () => {
+        const tgl = document.getElementById('monitoringDate')?.value;
+        if (!tgl) { showToast('Pilih tanggal terlebih dahulu.', 'error'); return; }
+        buildMonitoringForm(tgl);
+    });
+
+    document.getElementById('btnSimpanMonitoring')?.addEventListener('click', () => {
+        const tgl = document.getElementById('monitoringDate')?.value;
+        if (!tgl) { showToast('Pilih tanggal terlebih dahulu.', 'error'); return; }
+        saveMonitoringData(tgl);
+    });
+
+    function buildMonitoringForm(tgl) {
+        const container = document.getElementById('monitoringPetakContainer');
+        if (!container) return;
+
+        const petakList    = getPetakList();
+        const penyadapList = getActivePenyadap();
+        const mon          = getMonitoringData();
+        const dayData      = mon[tgl] || {};
+
+        if (!petakList.length) {
+            container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text-muted);">Belum ada petak terdaftar. Silakan tambah petak di menu Kelola Mandor.</div>';
             return;
         }
 
-        issues.forEach(item => {
-            const itemDiv = document.createElement('div');
-            const isCritical = item.kondisi_lapangan === 'Pohon Rusak' || item.kondisi_lapangan === 'Wadah Rusak';
-            itemDiv.className = `issue-item ${isCritical ? '' : 'kuning'}`;
+        const statusOptions = ['Hadir', 'Sakit', 'Ke Pertanian', 'Hajatan', 'Bangunan', 'Lainnya'];
+        const dateLabel = formatDateLong(tgl);
 
-            itemDiv.innerHTML = `
-                <div class="issue-meta">
-                    <span>${item.petak}</span>
-                    <span>${formatDateDMY(item.tanggal)}</span>
+        let html = `<div style="margin-bottom:12px; font-size:0.9rem; color:var(--text-muted); font-weight:600;">📅 Monitoring: ${dateLabel}</div>`;
+
+        petakList.forEach(petak => {
+            const assigned = penyadapList.filter(p => p.petak === petak.kode);
+            if (!assigned.length) return;
+
+            html += `<div class="monitoring-petak-section">
+                <div class="monitoring-petak-header">
+                    <div class="monitoring-petak-title">📍 ${petak.kode}</div>
+                    <div class="monitoring-petak-badge">${assigned.length} Penyadap</div>
                 </div>
-                <div class="issue-desc">${item.kendala}</div>
-                <div class="issue-context">Kondisi: <strong>${item.kondisi_lapangan}</strong> | Penyadap: <strong>${item.nama_penyadap}</strong></div>
-            `;
-            listContainer.appendChild(itemDiv);
+                <div class="monitoring-penyadap-list">`;
+
+            assigned.forEach(p => {
+                const saved  = dayData[p.nama] || {};
+                const status = saved.status || 'Hadir';
+                const ket    = saved.keterangan || '';
+
+                const radios = statusOptions.map(s => {
+                    const checked = status === s ? 'checked' : '';
+                    const safeId  = `mon_${tgl}_${p.nama.replace(/\s+/g, '_')}_${s.replace(/\s+/g, '_')}`;
+                    return `<input type="radio" class="mon-status-radio" name="mon_${tgl}_${p.nama.replace(/\s+/g,'_')}" value="${s}" id="${safeId}" ${checked} onchange="onMonStatusChange('${tgl}','${p.nama}',this.value)">
+                            <label class="mon-status-label" for="${safeId}">${s}</label>`;
+                }).join('');
+
+                const showKet = (status !== 'Hadir') ? 'visible' : '';
+                const rowClass = status === 'Hadir' ? 'hadir' : status === 'Sakit' ? 'sakit' : 'tidak-hadir';
+
+                html += `<div class="monitoring-penyadap-row ${rowClass}" id="monrow_${tgl}_${p.nama.replace(/\s+/g,'_')}">
+                    <div class="mon-penyadap-name">👤 ${p.nama}</div>
+                    <div class="mon-status-select-group">${radios}</div>
+                    <input type="text" class="mon-keterangan-input ${showKet}" id="monket_${tgl}_${p.nama.replace(/\s+/g,'_')}" placeholder="Keterangan..." value="${ket}" oninput="onMonKetChange('${tgl}','${p.nama}',this.value)">
+                </div>`;
+            });
+
+            html += '</div></div>';
         });
+
+        container.innerHTML = html;
+        updateMonitoringCounts();
     }
 
-    function animateValue(obj, endValue, suffix = '') {
-        let start = 0;
-        let duration = 600;
-        let startTimestamp = null;
-        const step = (timestamp) => {
-            if (!startTimestamp) startTimestamp = timestamp;
-            const progress = Math.min((timestamp - startTimestamp) / duration, 1);
-            const current = progress * (endValue - start) + start;
+    window.onMonStatusChange = function(tgl, nama, status) {
+        const mon = getMonitoringData();
+        if (!mon[tgl]) mon[tgl] = {};
+        if (!mon[tgl][nama]) mon[tgl][nama] = {};
+        mon[tgl][nama].status = status;
+        lsSet(LS.MONITORING, mon);
 
-            if (Number.isInteger(endValue)) {
-                obj.innerHTML = Math.floor(current) + suffix;
-            } else {
-                obj.innerHTML = current.toFixed(1) + suffix;
-            }
-            if (progress < 1) {
-                window.requestAnimationFrame(step);
-            }
-        };
-        window.requestAnimationFrame(step);
+        const safeNama = nama.replace(/\s+/g, '_');
+        const row    = document.getElementById(`monrow_${tgl}_${safeNama}`);
+        const ketEl  = document.getElementById(`monket_${tgl}_${safeNama}`);
+        if (row) {
+            row.className = `monitoring-penyadap-row ${status === 'Hadir' ? 'hadir' : status === 'Sakit' ? 'sakit' : 'tidak-hadir'}`;
+        }
+        if (ketEl) {
+            ketEl.classList.toggle('visible', status !== 'Hadir');
+        }
+        updateMonitoringCounts();
+    };
+
+    window.onMonKetChange = function(tgl, nama, ket) {
+        const mon = getMonitoringData();
+        if (!mon[tgl]) mon[tgl] = {};
+        if (!mon[tgl][nama]) mon[tgl][nama] = {};
+        mon[tgl][nama].keterangan = ket;
+        lsSet(LS.MONITORING, mon);
+    };
+
+    function saveMonitoringData(tgl) {
+        // Data sudah auto-save saat user klik radio, ini hanya konfirmasi
+        showToast(`✅ Data monitoring ${formatDateDMY(tgl)} berhasil disimpan!`, 'success');
+        updateMonitoringCounts();
     }
 
-    // ================= 4. MAP VISUALIZER =================
+    function updateMonitoringCounts() {
+        const tgl = document.getElementById('monitoringDate')?.value;
+        if (!tgl) return;
+        const mon = getMonitoringData();
+        const dayData = mon[tgl] || {};
+        const allActive = getActivePenyadap();
+
+        let hadir = 0, tidakHadir = 0, sakit = 0, lainnya = 0;
+        allActive.forEach(p => {
+            const info = dayData[p.nama];
+            const status = info?.status || 'Hadir';
+            if (status === 'Hadir') hadir++;
+            else { tidakHadir++; if (status === 'Sakit') sakit++; else lainnya++; }
+        });
+
+        const setEl = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+        setEl('monHadirCount',     hadir);
+        setEl('monTidakHadirCount', tidakHadir);
+        setEl('monSakitCount',      sakit);
+        setEl('monLainnyaCount',    lainnya);
+    }
+
+    // ======================== 7. MAP VISUALIZER ========================
+    const predefinedBlocks = ['P.01 - B.01', 'P.02 - B.05', 'P.03 - B.12', 'P.04 - B.08', 'P.05 - B.03', 'P.06 - B.10'];
+    const mapBlocks = document.querySelectorAll('.map-block');
 
     function renderMap(records) {
+        const allPetak = getPetakList().map(b => b.kode);
+        const useBlocks = allPetak.length ? allPetak : predefinedBlocks;
         mapDataCache = [];
 
-        predefinedBlocks.forEach(b => {
-            // Get records for block
-            const blockRecords = records.filter(r => r.petak === b);
-
-            // Average yield
-            const avg = blockRecords.length > 0
-                ? blockRecords.reduce((sum, r) => sum + r.estimasi_hasil, 0) / blockRecords.length
-                : 0;
-
-            // Latest entry details
-            const latest = blockRecords[0] || {
-                tanggal: '-',
-                nama_penyadap: 'Belum ada',
-                kondisi_lapangan: 'Normal',
-                kendala: 'Tidak ada'
-            };
-
-            // Determine status
-            let status = 'hijau';
-            let statusText = 'Produksi Baik';
-
+        useBlocks.forEach(b => {
+            const br = records.filter(r => r.petak === b);
+            const avg = br.length > 0 ? br.reduce((s, r) => s + r.estimasi_hasil, 0) / br.length : 0;
+            const latest = br[0] || { tanggal: '-', nama_penyadap: 'Belum ada', kondisi_lapangan: 'Normal', kendala: 'Tidak ada' };
             const cond = latest.kondisi_lapangan;
-            if (avg < 5.0 || cond === 'Pohon Rusak' || cond === 'Wadah Rusak') {
-                status = 'merah';
-                statusText = 'Perlu Pengecekan';
-            } else if (avg <= 15.0 || cond === 'Hujan') {
-                status = 'kuning';
-                statusText = 'Produksi Menurun';
-            }
-
-            mapDataCache.push({
-                petak: b,
-                avg_produksi: parseFloat(avg.toFixed(1)),
-                terakhir_update: latest.tanggal,
-                penyadap_terakhir: latest.nama_penyadap,
-                kondisi_terakhir: latest.kondisi_lapangan,
-                kendala_terakhir: latest.kendala || 'Tidak ada',
-                status: status,
-                status_text: statusText
-            });
+            let status = 'hijau', statusText = 'Produksi Baik';
+            if (avg < 5 || cond === 'Pohon Rusak' || cond === 'Wadah Rusak') { status = 'merah'; statusText = 'Perlu Pengecekan'; }
+            else if (avg <= 15 || cond === 'Hujan') { status = 'kuning'; statusText = 'Produksi Menurun'; }
+            mapDataCache.push({ petak: b, avg_produksi: +avg.toFixed(1), terakhir_update: latest.tanggal, penyadap_terakhir: latest.nama_penyadap, kondisi_terakhir: latest.kondisi_lapangan, kendala_terakhir: latest.kendala || 'Tidak ada', status, status_text: statusText });
         });
 
-        // Color the SVG map elements
         mapDataCache.forEach(block => {
-            const mapEl = document.querySelector(`.map-block[data-block-id="${block.petak}"]`);
-            if (mapEl) {
-                mapEl.classList.remove('hijau', 'kuning', 'merah');
-                mapEl.classList.add(block.status);
-            }
+            const el = document.querySelector(`.map-block[data-block-id="${block.petak}"]`);
+            if (el) { el.classList.remove('hijau', 'kuning', 'merah'); el.classList.add(block.status); }
         });
 
-        // Refresh details card if selection is active
-        const selectedBlockEl = document.querySelector('.map-block.selected');
-        if (selectedBlockEl) {
-            showBlockDetails(selectedBlockEl.getAttribute('data-block-id'));
-        }
+        const sel = document.querySelector('.map-block.selected');
+        if (sel) showBlockDetails(sel.getAttribute('data-block-id'));
     }
 
     mapBlocks.forEach(block => {
@@ -600,169 +896,124 @@ document.addEventListener('DOMContentLoaded', function () {
     function showBlockDetails(blockId) {
         const info = mapDataCache.find(d => d.petak === blockId);
         if (!info) return;
-
-        detailEmptyState.style.display = 'none';
-        detailActiveState.style.display = 'block';
-
+        document.getElementById('detailEmptyState').style.display  = 'none';
+        document.getElementById('detailActiveState').style.display = 'block';
         document.getElementById('det-petak-name').textContent = info.petak;
-
         const badge = document.getElementById('det-status-badge');
         badge.textContent = info.status_text;
-        badge.className = 'badge-status ' + info.status;
-
-        document.getElementById('det-avg-prod').textContent = `${info.avg_produksi} kg`;
+        badge.className   = 'badge-status ' + info.status;
+        document.getElementById('det-avg-prod').textContent    = `${info.avg_produksi} kg`;
         document.getElementById('det-last-worker').textContent = info.penyadap_terakhir;
-        document.getElementById('det-last-cond').textContent = info.kondisi_terakhir;
-        document.getElementById('det-last-issue').textContent = info.kendala_terakhir;
+        document.getElementById('det-last-cond').textContent   = info.kondisi_terakhir;
+        document.getElementById('det-last-issue').textContent  = info.kendala_terakhir;
         document.getElementById('det-last-update').textContent = formatDateDMY(info.terakhir_update);
     }
 
-
-    // ================= 5. TABLE REPORT FILTERING =================
-
+    // ======================== 8. TABEL LAPORAN ========================
     function renderReportTable(records) {
-        const search = document.getElementById('filter-search').value.toLowerCase().trim();
-        const petak = document.getElementById('filter-petak').value;
-        const startDate = document.getElementById('filter-start-date').value;
-        const endDate = document.getElementById('filter-end-date').value;
+        const search    = document.getElementById('filter-search')?.value.toLowerCase().trim() || '';
+        const petak     = document.getElementById('filter-petak')?.value || '';
+        const startDate = document.getElementById('filter-start-date')?.value || '';
+        const endDate   = document.getElementById('filter-end-date')?.value || '';
 
-        // Apply filters locally in browser
         let filtered = [...records];
+        if (search)    filtered = filtered.filter(r => r.nama_penyadap.toLowerCase().includes(search) || (r.kendala || '').toLowerCase().includes(search));
+        if (petak)     filtered = filtered.filter(r => r.petak === petak);
+        if (startDate) filtered = filtered.filter(r => r.tanggal >= startDate);
+        if (endDate)   filtered = filtered.filter(r => r.tanggal <= endDate);
 
-        if (search) {
-            filtered = filtered.filter(r =>
-                r.nama_penyadap.toLowerCase().includes(search) ||
-                r.kendala.toLowerCase().includes(search)
-            );
-        }
-        if (petak) {
-            filtered = filtered.filter(r => r.petak === petak);
-        }
-        if (startDate) {
-            filtered = filtered.filter(r => r.tanggal >= startDate);
-        }
-        if (endDate) {
-            filtered = filtered.filter(r => r.tanggal <= endDate);
-        }
+        const tbody = document.querySelector('#reportsTable tbody');
+        if (!tbody) return;
+        tbody.innerHTML = '';
 
-        const tableBody = document.querySelector('#reportsTable tbody');
-        tableBody.innerHTML = '';
-
-        if (filtered.length === 0) {
-            tableBody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 30px;">Tidak ditemukan data yang cocok dengan filter.</td></tr>';
+        if (!filtered.length) {
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:30px;">Tidak ditemukan data yang cocok dengan filter.</td></tr>';
             return;
         }
-
         filtered.forEach(item => {
             const tr = document.createElement('tr');
-            let condBadge = `<span style="font-weight: 700; color: #2d6a4f;">${item.kondisi_lapangan}</span>`;
-            if (item.kondisi_lapangan === 'Hujan') {
-                condBadge = `<span style="font-weight: 700; color: #f4a261;">${item.kondisi_lapangan}</span>`;
-            } else if (item.kondisi_lapangan === 'Pohon Rusak' || item.kondisi_lapangan === 'Wadah Rusak') {
-                condBadge = `<span style="font-weight: 700; color: #e63946;">${item.kondisi_lapangan}</span>`;
-            }
-
+            let condBadge = `<span style="font-weight:700;color:#2d6a4f;">${item.kondisi_lapangan}</span>`;
+            if (item.kondisi_lapangan === 'Hujan') condBadge = `<span style="font-weight:700;color:#f4a261;">${item.kondisi_lapangan}</span>`;
+            else if (item.kondisi_lapangan === 'Pohon Rusak' || item.kondisi_lapangan === 'Wadah Rusak') condBadge = `<span style="font-weight:700;color:#e63946;">${item.kondisi_lapangan}</span>`;
             tr.innerHTML = `
                 <td><strong>${formatDateDMY(item.tanggal)}</strong></td>
                 <td>${item.nama_penyadap}</td>
-                <td><code style="background-color: #edf2f7; padding: 4px 8px; border-radius: 4px; font-weight: 600;">${item.petak}</code></td>
+                <td><code style="background:#edf2f7;padding:4px 8px;border-radius:4px;font-weight:600;">${item.petak}</code></td>
                 <td><strong>${item.estimasi_hasil} kg</strong></td>
                 <td>${condBadge}</td>
-                <td>${item.kendala ? `<span style="color:#d90429; font-weight: 600;">${item.kendala}</span>` : '<span style="color:#718096; font-style: italic;">Tidak ada</span>'}</td>
-            `;
-            tableBody.appendChild(tr);
+                <td>${item.kendala ? `<span style="color:#d90429;font-weight:600;">${item.kendala}</span>` : '<span style="color:#718096;font-style:italic;">Tidak ada</span>'}</td>`;
+            tbody.appendChild(tr);
         });
-
-        // Store a reference to currently filtered data for CSV export
-        tableBody.dataset.filteredJson = JSON.stringify(filtered);
+        tbody.dataset.filteredJson = JSON.stringify(filtered);
     }
 
-    if (btnFilterApply) {
-        btnFilterApply.addEventListener('click', () => renderReportTable(globalRecords));
-    }
+    document.getElementById('btnFilterApply')?.addEventListener('click', () => renderReportTable(globalRecords));
 
-
-    // ================= 6. CSV EXPORTS & PRINT =================
-
-    if (btnExportCSV) {
-        btnExportCSV.addEventListener('click', function () {
-            const tableBody = document.querySelector('#reportsTable tbody');
-            const dataStr = tableBody.dataset.filteredJson;
-            if (!dataStr) {
-                alert('Tabel laporan belum dimuat.');
-                return;
-            }
-            const data = JSON.parse(dataStr);
-            downloadCSV(data);
+    // ======================== 9. EXPORT & PRINT ========================
+    document.getElementById('btnExportCSV')?.addEventListener('click', () => {
+        const tbody = document.querySelector('#reportsTable tbody');
+        const data  = JSON.parse(tbody?.dataset.filteredJson || '[]');
+        if (!data.length) { showToast('Tidak ada data untuk diekspor.', 'warning'); return; }
+        let csv = 'data:text/csv;charset=utf-8,ID,Tanggal,Nama Penyadap,Petak/Blok,Estimasi Hasil (kg),Kondisi Lapangan,Kendala\n';
+        data.forEach(r => {
+            csv += [r.id, r.tanggal, `"${(r.nama_penyadap||'').replace(/"/g,'""')}"`, `"${(r.petak||'').replace(/"/g,'""')}"`, r.estimasi_hasil, `"${(r.kondisi_lapangan||'').replace(/"/g,'""')}"`, `"${(r.kendala||'').replace(/"/g,'""')}"`].join(',') + '\n';
         });
+        const a = document.createElement('a');
+        a.href = encodeURI(csv);
+        a.download = `laporan_sipena_${todayStr()}.csv`;
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    });
+
+    document.getElementById('btnPrintReport')?.addEventListener('click', () => {
+        const span = document.getElementById('printDateSpan');
+        if (span) span.textContent = new Date().toLocaleString('id-ID');
+        window.print();
+    });
+
+    // ======================== 10. CHART HELPERS ========================
+    function initChart(canvasId, type, data, options) {
+        if (charts[canvasId]) charts[canvasId].destroy();
+        const canvas = document.getElementById(canvasId);
+        if (!canvas) return;
+        charts[canvasId] = new Chart(canvas.getContext('2d'), { type, data, options });
     }
 
-    function downloadCSV(data) {
-        if (data.length === 0) {
-            alert('Tidak ada data untuk diekspor!');
-            return;
-        }
-
-        let csvContent = "data:text/csv;charset=utf-8,";
-        csvContent += "ID,Tanggal,Nama Penyadap,Petak/Blok,Estimasi Hasil (kg),Kondisi Lapangan,Kendala\n";
-
-        data.forEach(row => {
-            const fields = [
-                row.id,
-                row.tanggal,
-                `"${row.nama_penyadap.replace(/"/g, '""')}"`,
-                `"${row.petak.replace(/"/g, '""')}"`,
-                row.estimasi_hasil,
-                `"${row.kondisi_lapangan.replace(/"/g, '""')}"`,
-                `"${(row.kendala || '').replace(/"/g, '""')}"`
-            ];
-            csvContent += fields.join(",") + "\n";
-        });
-
-        const encodedUri = encodeURI(csvContent);
-        const link = document.createElement("a");
-        link.setAttribute("href", encodedUri);
-
-        const dateStr = new Date().toISOString().split('T')[0];
-        link.setAttribute("download", `laporan_produksi_sipena_${dateStr}.csv`);
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+    function animateValue(el, end, suffix = '', isInt = false) {
+        if (!el) return;
+        let start = 0, dur = 600, startTs = null;
+        const step = (ts) => {
+            if (!startTs) startTs = ts;
+            const prog = Math.min((ts - startTs) / dur, 1);
+            const cur  = prog * (end - start) + start;
+            el.innerHTML = (isInt ? Math.floor(cur) : cur.toFixed(1)) + suffix;
+            if (prog < 1) requestAnimationFrame(step);
+        };
+        requestAnimationFrame(step);
     }
 
-    if (btnPrintReport) {
-        btnPrintReport.addEventListener('click', function () {
-            const today = new Date();
-            const dateStr = formatDateDMY(today.toISOString().split('T')[0]) + ' ' + String(today.getHours()).padStart(2, '0') + ':' + String(today.getMinutes()).padStart(2, '0');
-            if (printDateSpan) printDateSpan.textContent = dateStr;
-            window.print();
-        });
-    }
-
-    // ================= 7. INTER-IFRAME COMMUNICATION =================
-
-    window.addEventListener('message', function (event) {
-        if (event.data && event.data.type === 'SIPENA_SUBMIT_SUCCESS') {
-            console.log("Submit sukses dideteksi! Me-refresh database...");
-            // Force reload data
+    // ======================== 11. INTER-IFRAME MSG ========================
+    window.addEventListener('message', (e) => {
+        if (e.data?.type === 'SIPENA_SUBMIT_SUCCESS') {
             loadAllData(records => {
-                const activeTab = document.querySelector('.sidebar-menu li.active').getAttribute('data-tab');
-                renderTabView(activeTab);
+                const activeTab = document.querySelector('.sidebar-menu li.active')?.getAttribute('data-tab');
+                if (activeTab) renderTabView(activeTab);
             });
         }
     });
 
-    // ================= HELPERS =================
+    // ======================== INITIAL LOAD ========================
+    // Set default monitoring date
+    const monDateEl = document.getElementById('monitoringDate');
+    if (monDateEl) monDateEl.value = todayStr();
 
-    function formatDateDMY(dateString) {
-        if (!dateString || dateString === '-') return '-';
-        const parts = dateString.split(' ')[0].split('-'); // Split out time if any
-        if (parts.length !== 3) return dateString;
-        return `${parts[2]}/${parts[1]}/${parts[0]}`;
-    }
+    // Set print date
+    const pds = document.getElementById('printDateSpan');
+    if (pds) pds.textContent = new Date().toLocaleDateString('id-ID');
 
-    // ================= INITIAL RUN =================
+    // Load data & render dashboard
     loadAllData(records => {
         renderDashboard(records);
+        // Also update filter petak dropdown
+        populatePetakDropdowns();
     });
 });
