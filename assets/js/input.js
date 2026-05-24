@@ -263,10 +263,9 @@ document.addEventListener('DOMContentLoaded', function () {
             saveEntryDemoMode(data);
         } else {
             // ================= CLOUD MODE =================
+            saveEntryOffline(data);
             if (navigator.onLine) {
-                sendEntryToGoogleSheets(data);
-            } else {
-                saveEntryOffline(data);
+                syncOfflineEntries();
             }
         }
     });
@@ -297,32 +296,6 @@ document.addEventListener('DOMContentLoaded', function () {
         }, 600);
     }
 
-    function sendEntryToGoogleSheets(data) {
-        // Fetch to Google Apps Script requires redirect: 'follow'
-        fetch(WEB_APP_URL, {
-            method: 'POST',
-            mode: 'no-cors', // Standard Google Apps Script write can use no-cors to avoid CORS preflight,
-            // as write doesn't necessarily need response parsing to confirm receipt.
-            // But to support sync feedback we can use standard fetch.
-            body: JSON.stringify(data)
-        })
-            .then(() => {
-                // Since we use no-cors, we assume success if the fetch promise resolves.
-                btnSubmit.disabled = false;
-                btnSubmit.textContent = 'Kirim';
-                showToast('✅ Data berhasil dikirim ke Google Sheets!');
-                resetForm();
-
-                if (window.parent && window.parent !== window) {
-                    window.parent.postMessage({ type: 'SIPENA_SUBMIT_SUCCESS' }, '*');
-                }
-            })
-            .catch(err => {
-                console.error("Gagal mengirim data:", err);
-                saveEntryOffline(data);
-            });
-    }
-
     function saveEntryOffline(data) {
         let offlineEntries = [];
         try {
@@ -336,8 +309,10 @@ document.addEventListener('DOMContentLoaded', function () {
 
         btnSubmit.disabled = false;
         btnSubmit.textContent = 'Kirim';
-        showToast('📶 Tersimpan offline. Otomatis sinkron saat terhubung internet.');
         resetForm();
+        if (!navigator.onLine) {
+            showToast('📶 Tersimpan offline. Otomatis sinkron saat terhubung internet.');
+        }
     }
 
     function resetForm() {
@@ -382,8 +357,27 @@ document.addEventListener('DOMContentLoaded', function () {
     window.addEventListener('offline', updateOnlineStatus);
     updateOnlineStatus(); // Initial call
 
+    let isSyncingEntries = false;
+
+    function dequeueOfflineEntry() {
+        try {
+            let entries = JSON.parse(localStorage.getItem('sipena_offline_entries')) || [];
+            if (entries.length > 0) {
+                entries.shift(); // Remove the first item
+                localStorage.setItem('sipena_offline_entries', JSON.stringify(entries));
+            }
+        } catch (e) {
+            console.error("Gagal dequeue offline entry:", e);
+        }
+    }
+
     // 6. Sync offline entries (Google Sheets)
     function syncOfflineEntries() {
+        if (isSyncingEntries) {
+            setTimeout(syncOfflineEntries, 1000);
+            return;
+        }
+
         let entries = [];
         try {
             entries = JSON.parse(localStorage.getItem('sipena_offline_entries')) || [];
@@ -393,6 +387,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
         if (entries.length === 0) return;
 
+        isSyncingEntries = true;
         console.log(`Menyinkronkan ${entries.length} entri offline ke Google Sheets...`);
 
         let promiseChain = Promise.resolve();
@@ -407,28 +402,23 @@ document.addEventListener('DOMContentLoaded', function () {
                 })
                     .then(() => {
                         syncedCount++;
-                    })
-                    .catch(err => {
-                        console.error("Gagal sinkron item index " + index, err);
-                        throw err;
+                        dequeueOfflineEntry();
                     });
             });
         });
 
         promiseChain.then(() => {
-            localStorage.removeItem('sipena_offline_entries');
-            showToast(`🔄 Berhasil sinkron ${syncedCount} data offline ke Google Sheets!`);
+            isSyncingEntries = false;
+            if (syncedCount > 0) {
+                showToast(`🔄 Berhasil sinkron ${syncedCount} data offline ke Google Sheets!`);
+            }
             loadFormOptions();
             if (window.parent && window.parent !== window) {
                 window.parent.postMessage({ type: 'SIPENA_SUBMIT_SUCCESS' }, '*');
             }
         }).catch(err => {
-            const remaining = entries.slice(syncedCount);
-            if (remaining.length > 0) {
-                localStorage.setItem('sipena_offline_entries', JSON.stringify(remaining));
-            } else {
-                localStorage.removeItem('sipena_offline_entries');
-            }
+            isSyncingEntries = false;
+            console.error("Gagal sinkron entries offline:", err);
             if (syncedCount > 0) {
                 showToast(`🔄 Sebagian tersinkron (${syncedCount} data).`);
                 if (window.parent && window.parent !== window) {

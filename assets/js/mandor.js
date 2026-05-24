@@ -23,6 +23,88 @@ document.addEventListener('DOMContentLoaded', function () {
     function lsSet(key, val) {
         try { localStorage.setItem(key, JSON.stringify(val)); } catch { }
     }
+    let isSyncingOffline = false;
+
+    function queueOfflineCrud(actionPayload) {
+        let queue = [];
+        try {
+            queue = JSON.parse(localStorage.getItem('sipena_offline_crud')) || [];
+        } catch {
+            queue = [];
+        }
+        queue.push(actionPayload);
+        localStorage.setItem('sipena_offline_crud', JSON.stringify(queue));
+        if (!navigator.onLine) {
+            showToast('📶 Disimpan offline. Akan disinkronkan saat terhubung internet.', 'warning');
+        }
+    }
+
+    function dequeueOfflineCrud() {
+        try {
+            let queue = JSON.parse(localStorage.getItem('sipena_offline_crud')) || [];
+            if (queue.length > 0) {
+                queue.shift(); // Remove the first item
+                localStorage.setItem('sipena_offline_crud', JSON.stringify(queue));
+            }
+        } catch (e) {
+            console.error("Gagal dequeue offline crud:", e);
+        }
+    }
+
+    function syncOfflineCrud(callback) {
+        if (isSyncingOffline) {
+            setTimeout(() => {
+                syncOfflineCrud(callback);
+            }, 1000);
+            return;
+        }
+
+        let queue = [];
+        try {
+            queue = JSON.parse(localStorage.getItem('sipena_offline_crud')) || [];
+        } catch {
+            queue = [];
+        }
+
+        if (queue.length === 0) {
+            if (callback) callback();
+            return;
+        }
+
+        isSyncingOffline = true;
+        console.log(`Menyinkronkan ${queue.length} aksi CRUD offline ke Google Sheets...`);
+        let promiseChain = Promise.resolve();
+        let syncedCount = 0;
+
+        queue.forEach((payload, index) => {
+            promiseChain = promiseChain.then(() => {
+                return fetch(WEB_APP_URL, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    body: JSON.stringify(payload)
+                }).then(() => {
+                    syncedCount++;
+                    dequeueOfflineCrud();
+                });
+            });
+        });
+
+        promiseChain.then(() => {
+            isSyncingOffline = false;
+            if (syncedCount > 0) {
+                showToast(`🔄 Berhasil sinkron ${syncedCount} data offline ke Google Sheets!`, 'success');
+            }
+            setTimeout(() => {
+                if (callback) callback();
+            }, 3000);
+        }).catch(err => {
+            isSyncingOffline = false;
+            console.error("Gagal sinkron aksi offline:", err);
+            setTimeout(() => {
+                if (callback) callback();
+            }, 3000);
+        });
+    }
 
     function migrateLocalStorageData() {
         // 1. Migrate Petak
@@ -76,6 +158,19 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function syncCloudMetadata(callback) {
         if (WEB_APP_URL && navigator.onLine) {
+            // Cek jika ada antrean offline crud. Jika ada, jangan timpa local storage agar data lokal tidak terhapus.
+            let queue = [];
+            try {
+                queue = JSON.parse(localStorage.getItem('sipena_offline_crud')) || [];
+            } catch {
+                queue = [];
+            }
+            if (queue.length > 0) {
+                console.log("Ada antrean offline CRUD. Menunda sinkronisasi metadata cloud agar data lokal tidak terhapus.");
+                if (callback) callback();
+                return;
+            }
+
             fetch(WEB_APP_URL)
                 .then(r => r.json())
                 .then(res => {
@@ -507,17 +602,15 @@ document.addEventListener('DOMContentLoaded', function () {
             renderPenyadapTable();
             showToast(`Penyadap "${p.nama}" berhasil dihapus.`, 'warning');
 
-            if (WEB_APP_URL && navigator.onLine) {
-                fetch(WEB_APP_URL, {
-                    method: 'POST',
-                    mode: 'no-cors',
-                    body: JSON.stringify({ action: 'deletePenyadap', id: id })
-                }).then(() => {
-                    showToast('Penyadap berhasil dihapus dari Google Sheets!', 'warning');
+            queueOfflineCrud({ action: 'deletePenyadap', id: id });
+            if (navigator.onLine) {
+                syncOfflineCrud(() => {
                     syncCloudMetadata(() => {
                         renderPenyadapTable();
                     });
                 });
+            } else {
+                renderPenyadapTable();
             }
         }
     };
@@ -590,9 +683,10 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         }
 
+        const existingP = id ? list.find(x => x.id === id) : null;
         const newP = id ? 
-            { id, nama, petak, status, pohon: pohonInput, luas: luasInput, target: targetInput } : 
-            { id: 'p' + Date.now(), nama, petak, status, pohon: pohonInput, luas: luasInput, target: targetInput };
+            { id, nama, petak, status, pohon: pohonInput, luas: luasInput, target: targetInput, periode1: (existingP ? (existingP.periode1 || 0) : 0), periode2: (existingP ? (existingP.periode2 || 0) : 0) } : 
+            { id: 'p' + Date.now(), nama, petak, status, pohon: pohonInput, luas: luasInput, target: targetInput, periode1: 0, periode2: 0 };
 
         if (id) {
             // Update
@@ -611,17 +705,15 @@ document.addEventListener('DOMContentLoaded', function () {
         closeModal('modalPenyadap');
         renderPenyadapTable();
 
-        if (WEB_APP_URL && navigator.onLine) {
-            fetch(WEB_APP_URL, {
-                method: 'POST',
-                mode: 'no-cors',
-                body: JSON.stringify({ action: 'savePenyadap', data: newP })
-            }).then(() => {
-                showToast('Penyadap berhasil disinkronkan ke Google Sheets!');
+        queueOfflineCrud({ action: 'savePenyadap', data: newP });
+        if (navigator.onLine) {
+            syncOfflineCrud(() => {
                 syncCloudMetadata(() => {
                     renderPenyadapTable();
                 });
             });
+        } else {
+            renderPenyadapTable();
         }
     });
 
@@ -858,36 +950,22 @@ document.addEventListener('DOMContentLoaded', function () {
         document.getElementById('modalTarget')?.classList.remove('active');
         showToast(`Target petak ${petak} periode berhasil disimpan!`, 'success');
 
-        // Sync with Google Sheets
-        if (WEB_APP_URL && navigator.onLine) {
-            // Post Target total
-            fetch(WEB_APP_URL, {
-                method: 'POST',
-                mode: 'no-cors',
-                body: JSON.stringify({ action: 'saveTarget', data: entry })
-            });
+        queueOfflineCrud({ action: 'saveTarget', data: entry });
+        tapperUpdates.forEach(update => {
+            const fullTapper = penyadapList.find(p => p.id === update.id);
+            if (fullTapper) {
+                queueOfflineCrud({ action: 'savePenyadap', data: fullTapper });
+            }
+        });
 
-            // Post individual tappers targets
-            const promises = tapperUpdates.map(update => {
-                const fullTapper = penyadapList.find(p => p.id === update.id);
-                if (fullTapper) {
-                    return fetch(WEB_APP_URL, {
-                        method: 'POST',
-                        mode: 'no-cors',
-                        body: JSON.stringify({ action: 'savePenyadap', data: fullTapper })
-                    });
-                }
-                return Promise.resolve();
+        if (navigator.onLine) {
+            syncOfflineCrud(() => {
+                syncCloudMetadata(() => {
+                    renderTargetTable();
+                });
             });
-
-            Promise.all(promises).then(() => {
-                showToast('Target berhasil disinkronkan ke Google Sheets!');
-                if (typeof syncCloudMetadata === 'function') {
-                    syncCloudMetadata(() => {
-                        renderTargetTable();
-                    });
-                }
-            });
+        } else {
+            renderTargetTable();
         }
     });
 
@@ -1017,19 +1095,31 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function saveMonitoringData(tgl) {
         const mon = getMonitoringData();
-        const dayData = mon[tgl] || {};
+        if (!mon[tgl]) mon[tgl] = {};
+
+        // Pastikan semua penyadap aktif di bawah pengawasan mandor ini terisi statusnya (default Hadir)
+        const supervisedTappers = getFilteredActivePenyadap();
+        supervisedTappers.forEach(p => {
+            if (!mon[tgl][p.nama]) {
+                mon[tgl][p.nama] = { status: 'Hadir', keterangan: '' };
+            }
+        });
+        lsSet(LS.MONITORING, mon);
+
+        const dayData = mon[tgl];
 
         showToast(`Data absensi tanggal ${tgl} disimpan secara lokal!`, 'success');
         updateMonitoringCounts();
 
-        if (WEB_APP_URL && navigator.onLine) {
-            fetch(WEB_APP_URL, {
-                method: 'POST',
-                mode: 'no-cors',
-                body: JSON.stringify({ action: 'saveMonitoring', tanggal: tgl, data: dayData })
-            }).then(() => {
-                showToast(`✅ Data absensi ${tgl} berhasil disinkronkan ke Google Sheets!`, 'success');
+        queueOfflineCrud({ action: 'saveMonitoring', tanggal: tgl, data: dayData });
+        if (navigator.onLine) {
+            syncOfflineCrud(() => {
+                syncCloudMetadata(() => {
+                    buildMonitoringForm(tgl);
+                });
             });
+        } else {
+            buildMonitoringForm(tgl);
         }
     }
 
@@ -1197,11 +1287,14 @@ document.addEventListener('DOMContentLoaded', function () {
         lsSet(LS.MANDOR, getMandorList());
     }
 
-    // Initial render / Authentication check
-    syncCloudMetadata(() => {
+    function startApp() {
         if (checkAuth()) {
             initMandorSelector();
             renderDashboardStats();
+            
+            // Reload active tab view on startup/auth success
+            const activeTab = document.querySelector('.sidebar-menu li.active')?.getAttribute('data-tab') || 'dashboard';
+            renderTabView(activeTab);
         } else {
             // Just populate the login dropdown in case it hasn't been
             const loginSelect = document.getElementById('loginMandorSelect');
@@ -1210,5 +1303,27 @@ document.addEventListener('DOMContentLoaded', function () {
                 loginSelect.innerHTML = mandors.map(m => `<option value="${m.id}">${m.nama}</option>`).join('');
             }
         }
+    }
+
+    // Auto-sync when browser goes back online
+    window.addEventListener('online', () => {
+        showToast('📶 Koneksi terhubung kembali. Mensinkronkan data offline...', 'success');
+        syncOfflineCrud(() => {
+            syncCloudMetadata(() => {
+                const activeTab = document.querySelector('.sidebar-menu li.active')?.getAttribute('data-tab') || 'dashboard';
+                renderTabView(activeTab);
+            });
+        });
     });
+
+    // Initial render / Authentication check
+    if (navigator.onLine) {
+        syncOfflineCrud(() => {
+            syncCloudMetadata(() => {
+                startApp();
+            });
+        });
+    } else {
+        startApp();
+    }
 });
