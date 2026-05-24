@@ -8,10 +8,10 @@ document.addEventListener('DOMContentLoaded', function () {
     // ======================== STATE MANAGEMENT ========================
     const LS = {
         PENYADAP: 'sipena_penyadap',
-        PETAK:    'sipena_petak',
-        TARGET:   'sipena_targets',
+        PETAK: 'sipena_petak',
+        TARGET: 'sipena_targets',
         DEMO_DATA: 'sipena_demo_entries',
-        MANDOR:   'sipena_mandor',
+        MANDOR: 'sipena_mandor',
         ACTIVE_MANDOR: 'sipena_active_mandor',
         MONITORING: 'sipena_monitoring',
     };
@@ -21,7 +21,7 @@ document.addEventListener('DOMContentLoaded', function () {
         try { return JSON.parse(localStorage.getItem(key)); } catch { return null; }
     }
     function lsSet(key, val) {
-        try { localStorage.setItem(key, JSON.stringify(val)); } catch {}
+        try { localStorage.setItem(key, JSON.stringify(val)); } catch { }
     }
 
     function migrateLocalStorageData() {
@@ -108,19 +108,19 @@ document.addEventListener('DOMContentLoaded', function () {
     function getMandorList() {
         return lsGet(LS.MANDOR) || [
             { id: 'm1', nama: 'Mandor Wawan', nik: '001', petak: ['P.01 - B.01', 'P.03 - B.12'] },
-            { id: 'm2', nama: 'Mandor Budi',  nik: '002', petak: ['P.02 - B.05', 'P.04 - B.08'] },
+            { id: 'm2', nama: 'Mandor Budi', nik: '002', petak: ['P.02 - B.05', 'P.04 - B.08'] },
             { id: 'm3', nama: 'Mandor Kardi', nik: '003', petak: ['P.05 - B.03', 'P.06 - B.10'] },
         ];
     }
 
     function getPenyadapList() {
         return lsGet(LS.PENYADAP) || [
-            { id: 'p1', nama: 'Slamet',  petak: 'P.01 - B.01', status: 'Aktif', pohon: 800 },
-            { id: 'p2', nama: 'Budi',    petak: 'P.02 - B.05', status: 'Aktif', pohon: 1000 },
-            { id: 'p3', nama: 'Sukijo',  petak: 'P.03 - B.12', status: 'Aktif', pohon: 700 },
+            { id: 'p1', nama: 'Slamet', petak: 'P.01 - B.01', status: 'Aktif', pohon: 800 },
+            { id: 'p2', nama: 'Budi', petak: 'P.02 - B.05', status: 'Aktif', pohon: 1000 },
+            { id: 'p3', nama: 'Sukijo', petak: 'P.03 - B.12', status: 'Aktif', pohon: 700 },
             { id: 'p4', nama: 'Tukimin', petak: 'P.04 - B.08', status: 'Aktif', pohon: 900 },
-            { id: 'p5', nama: 'Wawan',   petak: 'P.05 - B.03', status: 'Aktif', pohon: 800 },
-            { id: 'p6', nama: 'Kardi',   petak: 'P.06 - B.10', status: 'Aktif', pohon: 950 },
+            { id: 'p5', nama: 'Wawan', petak: 'P.05 - B.03', status: 'Aktif', pohon: 800 },
+            { id: 'p6', nama: 'Kardi', petak: 'P.06 - B.10', status: 'Aktif', pohon: 950 },
         ];
     }
 
@@ -181,8 +181,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // ======================== MODAL HELPERS ========================
     function openModal(id) { document.getElementById(id)?.classList.add('active'); }
-    function closeModal(id) { 
-        document.getElementById(id)?.classList.remove('active'); 
+    function closeModal(id) {
+        document.getElementById(id)?.classList.remove('active');
         resetModalForms();
     }
 
@@ -197,7 +197,7 @@ document.addEventListener('DOMContentLoaded', function () {
         document.getElementById('inputPetakPenyadap').selectedIndex = 0;
         document.getElementById('inputPohonPenyadap').value = '';
         document.getElementById('inputStatusPenyadap').value = 'Aktif';
-        
+
         const infoEl = document.getElementById('infoSisaPohon');
         if (infoEl) infoEl.textContent = '';
     }
@@ -218,7 +218,7 @@ document.addEventListener('DOMContentLoaded', function () {
             const val = this.value;
             localStorage.setItem(LS.ACTIVE_MANDOR, val);
             updateHeaderMandorName(val);
-            
+
             // Reload active view stats or tables
             const activeTab = document.querySelector('.sidebar-menu li.active')?.getAttribute('data-tab') || 'dashboard';
             renderTabView(activeTab);
@@ -251,11 +251,11 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     // ======================== TAB ROUTING ========================
-    const sidebar     = document.getElementById('sidebar');
-    const menuToggle  = document.getElementById('menuToggle');
-    const menuItems   = document.querySelectorAll('.sidebar-menu li');
+    const sidebar = document.getElementById('sidebar');
+    const menuToggle = document.getElementById('menuToggle');
+    const menuItems = document.querySelectorAll('.sidebar-menu li');
     const tabContents = document.querySelectorAll('.tab-content');
-    const pageTitle   = document.getElementById('pageTitle');
+    const pageTitle = document.getElementById('pageTitle');
     const pageSubtitle = document.getElementById('pageSubtitle');
 
     if (menuToggle) {
@@ -285,12 +285,12 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     const pageTitles = {
-        dashboard:  ['Beranda Mandor', 'Ringkasan Operasional & Pengelolaan Lapangan'],
-        penyadap:   ['Kelola Penyadap', 'Manajemen Data Tapper Hutan Pinus'],
+        dashboard: ['Beranda Mandor', 'Ringkasan Operasional & Pengelolaan Lapangan'],
+        penyadap: ['Kelola Penyadap', 'Manajemen Data Tapper Hutan Pinus'],
         monitoring: ['Absensi Harian (Absen)', 'Pencatatan Kehadiran & Status Harian Tapper'],
-        petak:      ['Petak yang Diawasi', 'Daftar Blok Wilayah Sadap (Read-Only)'],
-        target:     ['Target per Penyadap', 'Beban Target Bulanan/Tahunan per Penyadap (Read-Only)'],
-        input:      ['Form Timbangan HP', 'Formulir Input Hasil Timbangan Getah Pinus']
+        petak: ['Petak yang Diawasi', 'Daftar Blok Wilayah Sadap (Read-Only)'],
+        target: ['Target per Penyadap', 'Beban Target Bulanan/Tahunan per Penyadap (Read-Only)'],
+        input: ['Form Timbangan HP', 'Formulir Input Hasil Timbangan Getah Pinus']
     };
 
     function updatePageHeader(tab) {
@@ -301,11 +301,11 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function renderTabView(tab) {
         switch (tab) {
-            case 'dashboard':  renderDashboardStats(); break;
-            case 'penyadap':   renderPenyadapTable(); break;
+            case 'dashboard': renderDashboardStats(); break;
+            case 'penyadap': renderPenyadapTable(); break;
             case 'monitoring': renderMonitoringTab(); break;
-            case 'petak':      renderPetakTable(); break;
-            case 'target':     renderTargetTable(); break;
+            case 'petak': renderPetakTable(); break;
+            case 'target': renderTargetTable(); break;
             case 'input':
                 // Refresh iframe contents and pass active mandor values
                 const iframe = document.getElementById('inputIframe');
@@ -321,9 +321,9 @@ document.addEventListener('DOMContentLoaded', function () {
     function renderDashboardStats() {
         const activeWorkers = getFilteredActivePenyadap().length;
         const totalBlocks = getFilteredPetakList().length;
-        
+
         const totalArea = getFilteredPetakList().reduce((sum, b) => sum + (parseFloat(b.luas) || 0), 0);
-        
+
         const targets = getTargetList();
         const supervised = getSupervisedPetaks();
         const supervisedTargets = targets.filter(t => supervised.includes(t.petak));
@@ -381,34 +381,34 @@ document.addEventListener('DOMContentLoaded', function () {
         const petakSelect = document.getElementById('inputPetakPenyadap');
         const infoEl = document.getElementById('infoSisaPohon');
         const idInput = document.getElementById('editPenyadapId');
-        
+
         if (!petakSelect || !infoEl) return;
-        
+
         const petakKode = petakSelect.value;
         const currentPenyadapId = idInput ? idInput.value : '';
-        
+
         if (!petakKode) {
             infoEl.textContent = '';
             return;
         }
-        
+
         const petakList = getPetakList();
         const targetPetak = petakList.find(b => b.kode === petakKode);
         if (!targetPetak) {
             infoEl.textContent = 'Petak tidak ditemukan';
             return;
         }
-        
+
         const totalPohon = parseInt(targetPetak.pohon) || 0;
         const penyadapList = getPenyadapList();
-        
+
         // hitung pohon yang dipegang penyadap aktif LAIN
         const otherActive = penyadapList.filter(x => x.petak === petakKode && x.status === 'Aktif' && x.id !== currentPenyadapId);
         const allocated = otherActive.reduce((sum, x) => sum + (parseInt(x.pohon) || 0), 0);
         const sisa = Math.max(0, totalPohon - allocated);
-        
+
         infoEl.innerHTML = `🌳 Kapasitas Petak: <strong>${totalPohon.toLocaleString('id-ID')}</strong> pohon | Sisa Idle (Bisa disadap): <strong>${sisa.toLocaleString('id-ID')}</strong> pohon`;
-        
+
         // Jika sisa = 0, beri warna merah, jika tidak beri warna hijau
         infoEl.style.color = sisa > 0 ? '#2e7d32' : '#e53935';
     }
@@ -592,7 +592,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }).join('');
     }
 
-    // ======================== TARGET PRODUKSI (READ-ONLY) ========================
+    // ======================== TARGET PRODUKSI ========================
     function renderTargetTable() {
         const petakList = getFilteredPetakList();
         const targets = getTargetList();
@@ -601,7 +601,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (!tbody) return;
 
         if (!petakList.length) {
-            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:30px;">Belum ada data petak yang diawasi oleh Anda.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:30px;">Belum ada data petak yang diawasi oleh Anda.</td></tr>';
             return;
         }
 
@@ -629,10 +629,128 @@ document.addEventListener('DOMContentLoaded', function () {
                     </td>
                     <td>${parseFloat(target.periode1).toLocaleString('id-ID')} kg</td>
                     <td>${parseFloat(target.periode2).toLocaleString('id-ID')} kg</td>
+                    <td style="text-align: center;">
+                        <button class="btn btn-outline" style="padding: 6px 12px; font-size: 0.8rem;" onclick="window.aturTarget('${b.kode}')">✏️ Atur Periode</button>
+                    </td>
                 </tr>
             `;
         }).join('');
     }
+
+    // Expose aturTarget to global for Mandor
+    window.aturTarget = function(petakKode) {
+        const targets = getTargetList();
+        const thisYear = new Date().getFullYear();
+        const target = targets.find(t => t.petak === petakKode && parseInt(t.tahun) === thisYear) || {
+            tahun: thisYear,
+            tahunan: 3600,
+            periode1: 0,
+            periode2: 0
+        };
+
+        const activeWorkers = getPenyadapList().filter(p => p.petak === petakKode && p.status === 'Aktif');
+        document.getElementById('targetPetakKode').value = petakKode;
+        document.getElementById('modalTargetPenyadapNames').textContent = activeWorkers.length > 0
+            ? activeWorkers.map(w => w.nama).join(', ')
+            : 'Belum ada penyadap aktif ditugaskan pada petak ini.';
+
+        document.getElementById('targetTahun').value = target.tahun;
+        document.getElementById('targetTahunanTotal').value = target.tahunan;
+        document.getElementById('targetBulan1').value = target.periode1;
+        document.getElementById('targetBulan2').value = target.periode2;
+
+        document.getElementById('modalTargetTitle').textContent = `Atur Target Petak: ${petakKode}`;
+        
+        const modalTarget = document.getElementById('modalTarget');
+        if (modalTarget) {
+            modalTarget.classList.add('active');
+        }
+        
+        calcAndShowTargetPerPenyadap();
+    };
+
+    function calcAndShowTargetPerPenyadap() {
+        const petak = document.getElementById('targetPetakKode')?.value;
+        const tahunan = parseFloat(document.getElementById('targetTahunanTotal')?.value) || 0;
+        const p1 = parseFloat(document.getElementById('targetBulan1')?.value) || 0;
+        const p2 = parseFloat(document.getElementById('targetBulan2')?.value) || 0;
+        if (!petak) return;
+
+        const assigned = getPenyadapList().filter(p => p.petak === petak && p.status === 'Aktif');
+        const n = assigned.length || 1;
+
+        const elTahunan = document.getElementById('targetPerPenyadapTahunan');
+        const elNilai = document.getElementById('nilaiTargetPerPenyadap');
+        const elBulanan = document.getElementById('targetBulananPerPenyadap');
+        const elNilaiBul = document.getElementById('nilaiTargetBulananPenyadap');
+
+        if (tahunan > 0 && elTahunan && elNilai) {
+            elTahunan.style.display = 'flex';
+            elNilai.textContent = `${(tahunan / n).toFixed(0)} kg/tahun (${n} penyadap)`;
+        } else if (elTahunan) {
+            elTahunan.style.display = 'none';
+        }
+        if ((p1 > 0 || p2 > 0) && elBulanan && elNilaiBul) {
+            elBulanan.style.display = 'flex';
+            elNilaiBul.textContent = `Periode 1: ${(p1 / n).toFixed(0)} kg | Periode 2: ${(p2 / n).toFixed(0)} kg`;
+        } else if (elBulanan) {
+            elBulanan.style.display = 'none';
+        }
+    }
+
+    // Attach listeners to input elements inside modalTarget
+    ['targetBulan1', 'targetBulan2'].forEach(id => {
+        document.getElementById(id)?.addEventListener('input', calcAndShowTargetPerPenyadap);
+    });
+
+    // Close target modal handler (using close triggers or manual)
+    document.querySelectorAll('[data-modal-close="modalTarget"]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.getElementById('modalTarget')?.classList.remove('active');
+        });
+    });
+
+    // Save target button click handler
+    document.getElementById('btnSimpanTarget')?.addEventListener('click', () => {
+        const petak = document.getElementById('targetPetakKode')?.value;
+        const tahun = document.getElementById('targetTahun')?.value || '2026';
+        const tahunan = parseFloat(document.getElementById('targetTahunanTotal')?.value) || 0;
+        const p1 = parseFloat(document.getElementById('targetBulan1')?.value) || 0;
+        const p2 = parseFloat(document.getElementById('targetBulan2')?.value) || 0;
+
+        if (!petak) { showToast('Pilih petak.', 'error'); return; }
+
+        let targets = getTargetList();
+        const idx = targets.findIndex(t => t.petak === petak && String(t.tahun) === String(tahun));
+        const entry = { petak, tahun: parseInt(tahun), tahunan: tahunan, periode1: p1, periode2: p2 };
+
+        if (idx >= 0) {
+            targets[idx] = entry;
+        } else {
+            targets.push(entry);
+        }
+        
+        lsSet(LS.TARGET, targets);
+        renderTargetTable();
+        document.getElementById('modalTarget')?.classList.remove('active');
+        showToast(`Target petak ${petak} periode berhasil disimpan!`, 'success');
+
+        // Sync with Google Sheets
+        if (WEB_APP_URL && navigator.onLine) {
+            fetch(WEB_APP_URL, {
+                method: 'POST',
+                mode: 'no-cors',
+                body: JSON.stringify({ action: 'saveTarget', data: entry })
+            }).then(() => {
+                showToast('Target berhasil disinkronkan ke Google Sheets!');
+                if (typeof syncCloudMetadata === 'function') {
+                    syncCloudMetadata(() => {
+                        renderTargetTable();
+                    });
+                }
+            });
+        }
+    });
 
     // ======================== ABSENSI / MONITORING HARIAN ========================
     function todayStr() { return new Date().toISOString().split('T')[0]; }
@@ -645,7 +763,7 @@ document.addEventListener('DOMContentLoaded', function () {
     function renderMonitoringTab() {
         const dateEl = document.getElementById('monitoringDate');
         if (dateEl && !dateEl.value) dateEl.value = todayStr();
-        
+
         const tgl = dateEl?.value || todayStr();
         buildMonitoringForm(tgl);
     }
@@ -666,10 +784,10 @@ document.addEventListener('DOMContentLoaded', function () {
         const container = document.getElementById('monitoringPetakContainer');
         if (!container) return;
 
-        const petakList    = getFilteredPetakList();
+        const petakList = getFilteredPetakList();
         const penyadapList = getFilteredActivePenyadap();
-        const mon          = getMonitoringData();
-        const dayData      = mon[tgl] || {};
+        const mon = getMonitoringData();
+        const dayData = mon[tgl] || {};
 
         if (!petakList.length) {
             container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text-muted);">Belum ada petak yang ditugaskan kepada Anda oleh pimpinan.</div>';
@@ -695,26 +813,26 @@ document.addEventListener('DOMContentLoaded', function () {
                 <div class="monitoring-penyadap-list" style="display:flex; flex-direction:column; gap:12px;">`;
 
             assigned.forEach(p => {
-                const saved  = dayData[p.nama] || {};
+                const saved = dayData[p.nama] || {};
                 const status = saved.status || 'Hadir';
-                const ket    = saved.keterangan || '';
+                const ket = saved.keterangan || '';
 
                 const radios = statusOptions.map(s => {
                     const checked = status === s ? 'checked' : '';
-                    const safeId  = `mon_${tgl}_${p.nama.replace(/\s+/g, '_')}_${s.replace(/\s+/g, '_')}`;
-                    return `<input type="radio" class="mon-status-radio" name="mon_${tgl}_${p.nama.replace(/\s+/g,'_')}" value="${s}" id="${safeId}" ${checked} onchange="window.onMonStatusChange('${tgl}','${p.nama}',this.value)" style="margin-right: 4px; cursor:pointer;">
+                    const safeId = `mon_${tgl}_${p.nama.replace(/\s+/g, '_')}_${s.replace(/\s+/g, '_')}`;
+                    return `<input type="radio" class="mon-status-radio" name="mon_${tgl}_${p.nama.replace(/\s+/g, '_')}" value="${s}" id="${safeId}" ${checked} onchange="window.onMonStatusChange('${tgl}','${p.nama}',this.value)" style="margin-right: 4px; cursor:pointer;">
                             <label class="mon-status-label" for="${safeId}" style="margin-right:12px; font-size:0.85rem; font-weight:500; cursor:pointer; color:var(--text-main);">${s}</label>`;
                 }).join('');
 
                 const showKet = (status !== 'Hadir') ? 'block' : 'none';
                 const rowStyle = status === 'Hadir' ? 'border-left: 4px solid var(--primary-light); background:#f9fcf9;' : status === 'Sakit' ? 'border-left: 4px solid var(--warning); background:#fffaf5;' : 'border-left: 4px solid var(--danger); background:#fff5f5;';
 
-                html += `<div class="monitoring-penyadap-row" id="monrow_${tgl}_${p.nama.replace(/\s+/g,'_')}" style="padding:14px; border-radius:8px; display:flex; flex-direction:column; gap:10px; ${rowStyle} transition:var(--transition);">
+                html += `<div class="monitoring-penyadap-row" id="monrow_${tgl}_${p.nama.replace(/\s+/g, '_')}" style="padding:14px; border-radius:8px; display:flex; flex-direction:column; gap:10px; ${rowStyle} transition:var(--transition);">
                     <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
                         <div class="mon-penyadap-name" style="font-weight:700; color:var(--text-dark); font-size:0.95rem;">👤 ${p.nama}</div>
                         <div class="mon-status-select-group" style="display:flex; align-items:center; flex-wrap:wrap;">${radios}</div>
                     </div>
-                    <input type="text" class="form-control mon-keterangan-input" id="monket_${tgl}_${p.nama.replace(/\s+/g,'_')}" placeholder="Tulis alasan jika tidak hadir (sakit, hajatan, dll)..." value="${ket}" oninput="window.onMonKetChange('${tgl}','${p.nama}',this.value)" style="display:${showKet}; font-size:0.85rem; padding:6px 12px; width:100%;">
+                    <input type="text" class="form-control mon-keterangan-input" id="monket_${tgl}_${p.nama.replace(/\s+/g, '_')}" placeholder="Tulis alasan jika tidak hadir (sakit, hajatan, dll)..." value="${ket}" oninput="window.onMonKetChange('${tgl}','${p.nama}',this.value)" style="display:${showKet}; font-size:0.85rem; padding:6px 12px; width:100%;">
                 </div>`;
             });
 
@@ -730,7 +848,7 @@ document.addEventListener('DOMContentLoaded', function () {
         updateMonitoringCounts();
     }
 
-    window.onMonStatusChange = function(tgl, nama, status) {
+    window.onMonStatusChange = function (tgl, nama, status) {
         const mon = getMonitoringData();
         if (!mon[tgl]) mon[tgl] = {};
         if (!mon[tgl][nama]) mon[tgl][nama] = {};
@@ -738,8 +856,8 @@ document.addEventListener('DOMContentLoaded', function () {
         lsSet(LS.MONITORING, mon);
 
         const safeNama = nama.replace(/\s+/g, '_');
-        const row    = document.getElementById(`monrow_${tgl}_${safeNama}`);
-        const ketEl  = document.getElementById(`monket_${tgl}_${safeNama}`);
+        const row = document.getElementById(`monrow_${tgl}_${safeNama}`);
+        const ketEl = document.getElementById(`monket_${tgl}_${safeNama}`);
         if (row) {
             row.style.borderLeft = status === 'Hadir' ? '4px solid var(--primary-light)' : status === 'Sakit' ? '4px solid var(--warning)' : '4px solid var(--danger)';
             row.style.background = status === 'Hadir' ? '#f9fcf9' : status === 'Sakit' ? '#fffaf5' : '#fff5f5';
@@ -750,7 +868,7 @@ document.addEventListener('DOMContentLoaded', function () {
         updateMonitoringCounts();
     };
 
-    window.onMonKetChange = function(tgl, nama, ket) {
+    window.onMonKetChange = function (tgl, nama, ket) {
         const mon = getMonitoringData();
         if (!mon[tgl]) mon[tgl] = {};
         if (!mon[tgl][nama]) mon[tgl][nama] = {};
@@ -779,7 +897,7 @@ document.addEventListener('DOMContentLoaded', function () {
     function updateMonitoringCounts() {
         const tgl = document.getElementById('monitoringDate')?.value;
         if (!tgl) return;
-        
+
         const mon = getMonitoringData();
         const dayData = mon[tgl] || {};
         const allActive = getFilteredActivePenyadap();
@@ -793,10 +911,10 @@ document.addEventListener('DOMContentLoaded', function () {
         });
 
         const setEl = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
-        setEl('monHadirCount',     hadir);
+        setEl('monHadirCount', hadir);
         setEl('monTidakHadirCount', tidakHadir);
-        setEl('monSakitCount',      sakit);
-        setEl('monLainnyaCount',    lainnya);
+        setEl('monSakitCount', sakit);
+        setEl('monLainnyaCount', lainnya);
     }
 
     // ======================== EMBED FORM MSG LISTENER ========================
@@ -814,18 +932,18 @@ document.addEventListener('DOMContentLoaded', function () {
     function checkAuth() {
         const loggedInId = localStorage.getItem('sipena_logged_in_mandor');
         const overlay = document.getElementById('loginOverlay');
-        
+
         if (!loggedInId) {
             // Show overlay
             if (overlay) overlay.style.display = 'flex';
-            
+
             // Populate select dropdown
             const loginSelect = document.getElementById('loginMandorSelect');
             if (loginSelect) {
                 const mandors = getMandorList();
                 loginSelect.innerHTML = mandors.map(m => `<option value="${m.id}">${m.nama}</option>`).join('');
             }
-            
+
             // Focus PIN field
             const pinInput = document.getElementById('loginPIN');
             if (pinInput) {
@@ -836,7 +954,7 @@ document.addEventListener('DOMContentLoaded', function () {
         } else {
             // Hide overlay
             if (overlay) overlay.style.display = 'none';
-            
+
             // Set active mandor in localStorage to match the logged-in user
             localStorage.setItem(LS.ACTIVE_MANDOR, loggedInId);
             updateHeaderMandorName(loggedInId);
@@ -871,25 +989,25 @@ document.addEventListener('DOMContentLoaded', function () {
             // Success!
             localStorage.setItem('sipena_logged_in_mandor', mandorId);
             localStorage.setItem(LS.ACTIVE_MANDOR, mandorId);
-            
+
             // Clean pin
             pinInput.value = '';
-            
+
             // Hide overlay
             const overlay = document.getElementById('loginOverlay');
             if (overlay) overlay.style.display = 'none';
 
             // Show success toast
             showToast(`Selamat datang kembali, ${targetMandor.nama}!`, 'success');
-            
+
             // Re-initialize views
             updateHeaderMandorName(mandorId);
             initMandorSelector();
-            
+
             // Reload active tab view
             const activeTab = document.querySelector('.sidebar-menu li.active')?.getAttribute('data-tab') || 'dashboard';
             renderTabView(activeTab);
-            
+
             // Propagate active mandor to iframe
             propagateMandorToIframe();
         } else {
@@ -902,14 +1020,14 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Bind login event listeners
     document.getElementById('btnSubmitLogin')?.addEventListener('click', handleLoginSubmit);
-    document.getElementById('loginPIN')?.addEventListener('keypress', function(e) {
+    document.getElementById('loginPIN')?.addEventListener('keypress', function (e) {
         if (e.key === 'Enter') {
             handleLoginSubmit();
         }
     });
 
     // Bind logout event listener
-    document.getElementById('btnLogoutMandor')?.addEventListener('click', function(e) {
+    document.getElementById('btnLogoutMandor')?.addEventListener('click', function (e) {
         e.preventDefault();
         if (confirm('Apakah Anda yakin ingin keluar dari panel mandor?')) {
             localStorage.removeItem('sipena_logged_in_mandor');

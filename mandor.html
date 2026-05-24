@@ -343,11 +343,11 @@
                 </div>
             </div>
 
-            <!-- ================= TAB: TARGET PRODUKSI (READ-ONLY) ================= -->
+            <!-- ================= TAB: TARGET PRODUKSI ================= -->
             <div class="tab-content" id="tab-target">
                 <div class="filter-card" style="margin-bottom: 16px; padding: 16px 20px;">
                     <div style="font-size: 0.95rem; color: var(--text-muted); font-weight: 500; line-height: 1.6;">
-                        <strong>Target Produksi (Read-Only):</strong> Berikut adalah target produksi per petak yang telah diatur oleh pimpinan beserta alokasi pembagian target per tapper aktif.
+                        <strong>Target Produksi &amp; Alokasi:</strong> Target tahunan ditentukan oleh Pimpinan (Atasan). Anda (Mandor) bertugas menentukan target per periode (Periode 1 &amp; Periode 2) untuk masing-masing petak.
                     </div>
                 </div>
 
@@ -362,10 +362,11 @@
                                     <th>Target per Penyadap/Tahun</th>
                                     <th>Target Bulanan (Periode 1)</th>
                                     <th>Target Bulanan (Periode 2)</th>
+                                    <th style="width: 150px; text-align: center;">Aksi</th>
                                 </tr>
                             </thead>
                             <tbody id="targetTbody">
-                                <tr><td colspan="6" style="text-align: center; color: var(--text-muted);">Memuat data target...</td></tr>
+                                <tr><td colspan="7" style="text-align: center; color: var(--text-muted);">Memuat data target...</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -434,14 +435,15 @@
 
             <div class="form-group" style="margin-bottom: 14px;">
                 <label for="targetTahun">Tahun Target</label>
-                <input type="number" id="targetTahun" class="form-control" value="2026" min="2020" max="2030">
+                <input type="number" id="targetTahun" class="form-control" value="2026" min="2020" max="2030" readonly style="background-color: var(--border); cursor: not-allowed;">
             </div>
 
             <div style="font-weight: 700; font-size: 0.9rem; color: var(--primary); margin: 16px 0 8px 0; border-bottom: 1px solid var(--border); padding-bottom: 4px;">Target Tahunan</div>
             <div class="form-group" style="margin-bottom: 8px;">
                 <label for="targetTahunanTotal">Target Total Petak / 1 Tahun (kg)</label>
-                <input type="number" id="targetTahunanTotal" class="form-control" placeholder="Contoh: 3600" min="0">
+                <input type="number" id="targetTahunanTotal" class="form-control" placeholder="Contoh: 3600" min="0" readonly style="background-color: var(--border); cursor: not-allowed;">
             </div>
+
             <div class="target-derived-box" id="targetPerPenyadapTahunan" style="display:none;">
                 <svg viewBox="0 0 24 24"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
                 <span>Beban per Penyadap: <strong id="nilaiTargetPerPenyadap">-</strong></span>

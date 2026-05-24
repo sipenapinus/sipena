@@ -1064,6 +1064,10 @@ document.addEventListener('DOMContentLoaded', function () {
         document.getElementById('inputKodePetak').value = '';
         document.getElementById('inputLuasPetak').value = '';
         document.getElementById('inputPohonPetak').value = '';
+        
+        // Reset target fields
+        document.getElementById('inputTargetTahunan').value = '';
+        
         document.getElementById('modalPetakTitle').textContent = 'Tambah Petak Baru';
         openModal('modalPetak');
     });
@@ -1073,6 +1077,8 @@ document.addEventListener('DOMContentLoaded', function () {
         const kode = document.getElementById('inputKodePetak').value.trim();
         const luas = parseFloat(document.getElementById('inputLuasPetak').value) || 0;
         const pohon = parseInt(document.getElementById('inputPohonPetak').value) || 0;
+        
+        const targetTahunan = parseFloat(document.getElementById('inputTargetTahunan').value) || 0;
 
         if (!kode) { showToast('Masukkan kode petak.', 'error'); return; }
         if (luas <= 0) { showToast('Luas petak harus bernilai positif.', 'error'); return; }
@@ -1111,6 +1117,31 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         lsSet(LS.PETAK, list);
+        
+        // Save target details if targetTahunan is filled
+        if (targetTahunan > 0) {
+            let targets = getTargetList();
+            const tIdx = targets.findIndex(t => t.petak === kode && parseInt(t.tahun) === 2026);
+            const targetBulan1 = tIdx >= 0 ? (targets[tIdx].periode1 || 0) : 0;
+            const targetBulan2 = tIdx >= 0 ? (targets[tIdx].periode2 || 0) : 0;
+            const targetEntry = { petak: kode, tahun: 2026, tahunan: targetTahunan, periode1: targetBulan1, periode2: targetBulan2 };
+            if (tIdx >= 0) {
+                targets[tIdx] = targetEntry;
+            } else {
+                targets.push(targetEntry);
+            }
+            lsSet(LS.TARGET, targets);
+            
+            // Post Target to Sheets
+            if (WEB_APP_URL && navigator.onLine) {
+                fetch(WEB_APP_URL, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    body: JSON.stringify({ action: 'saveTarget', data: targetEntry })
+                });
+            }
+        }
+        
         closeModal('modalPetak');
         renderPetakTargetTable();
 
@@ -1137,6 +1168,12 @@ document.addEventListener('DOMContentLoaded', function () {
         document.getElementById('inputKodePetak').value = b.kode;
         document.getElementById('inputLuasPetak').value = b.luas;
         document.getElementById('inputPohonPetak').value = b.pohon || 1000;
+        
+        // Fetch target for current year 2026
+        const targets = getTargetList();
+        const t = targets.find(x => x.petak === b.kode && parseInt(x.tahun) === 2026) || { tahunan: '' };
+        document.getElementById('inputTargetTahunan').value = t.tahunan;
+
         document.getElementById('modalPetakTitle').textContent = 'Edit Data Petak';
         openModal('modalPetak');
     };
@@ -1206,7 +1243,6 @@ document.addEventListener('DOMContentLoaded', function () {
                     <td style="text-align: center;">
                         <div class="action-btns" style="display:flex; gap:8px; justify-content: center;">
                             <button class="btn btn-outline" style="padding: 6px 12px; font-size: 0.8rem;" onclick="window.editPetak('${b.id}')">✏️ Edit</button>
-                            <button class="btn btn-primary" style="padding: 6px 12px; font-size: 0.8rem; background-color: var(--accent);" onclick="window.aturTarget('${b.kode}')">🎯 Target</button>
                             <button class="btn btn-outline" style="padding: 6px 12px; font-size: 0.8rem; border-color: var(--danger); color: var(--danger);" onclick="window.deletePetak('${b.id}')">🗑️ Hapus</button>
                         </div>
                     </td>
