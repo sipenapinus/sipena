@@ -5,6 +5,12 @@ const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwTelvmwcTnXUKYx_CQ
 
 document.addEventListener('DOMContentLoaded', function () {
 
+    // Color constants for charts
+    const GA = '#40916c'; // Actual green
+    const GL = '#52b788'; // Light green
+    const Y  = '#f4a261'; // Orange/Yellow
+    const G  = '#1b4332'; // Dark green
+
     // ======================== STATE MANAGEMENT ========================
     const LS = {
         PENYADAP: 'sipena_penyadap',
@@ -14,6 +20,7 @@ document.addEventListener('DOMContentLoaded', function () {
         MANDOR: 'sipena_mandor',
         ACTIVE_MANDOR: 'sipena_active_mandor',
         MONITORING: 'sipena_monitoring',
+        CLOUD_CACHE: 'sipena_last_dashboard_data',
     };
 
     // Helper functions for LocalStorage
@@ -24,6 +31,61 @@ document.addEventListener('DOMContentLoaded', function () {
         try { localStorage.setItem(key, JSON.stringify(val)); } catch { }
     }
     let isSyncingOffline = false;
+    let globalRecords = [];
+    let charts = {};
+
+    function initChart(id, type, data, options = {}) {
+        const ctx = document.getElementById(id);
+        if (!ctx) return null;
+        if (charts[id]) charts[id].destroy();
+        charts[id] = new Chart(ctx, { type, data, options });
+        return charts[id];
+    }
+
+    function loadAllData(callback) {
+        if (!WEB_APP_URL) {
+            let data = lsGet(LS.DEMO_DATA) || [];
+            data.sort((a, b) => new Date(b.tanggal) - new Date(a.tanggal));
+            globalRecords = data;
+            if (callback) callback(data);
+            return;
+        }
+
+        if (navigator.onLine) {
+            fetch(WEB_APP_URL)
+                .then(r => r.json())
+                .then(res => {
+                    if (res.status === 'success' && res.data) {
+                        const fmt = res.data.map(r => ({
+                            id: r.id || 'c-' + Math.random().toString(36).substr(2,9),
+                            tanggal: r.tanggal || '',
+                            nama_penyadap: r.nama_penyadap || '',
+                            petak: r.petak || '',
+                            estimasi_hasil: parseFloat(r.estimasi_hasil) || 0,
+                            kondisi_lapangan: r.kondisi_lapangan || 'Normal',
+                            kendala: r.kendala || ''
+                        }));
+                        fmt.sort((a, b) => new Date(b.tanggal) - new Date(a.tanggal));
+                        lsSet(LS.CLOUD_CACHE, fmt);
+                        globalRecords = fmt;
+                        if (callback) callback(fmt);
+                    } else {
+                        const cached = lsGet(LS.CLOUD_CACHE) || [];
+                        globalRecords = cached;
+                        if (callback) callback(cached);
+                    }
+                })
+                .catch(() => {
+                    const cached = lsGet(LS.CLOUD_CACHE) || [];
+                    globalRecords = cached;
+                    if (callback) callback(cached);
+                });
+        } else {
+            const cached = lsGet(LS.CLOUD_CACHE) || [];
+            globalRecords = cached;
+            if (callback) callback(cached);
+        }
+    }
 
     function queueOfflineCrud(actionPayload) {
         let queue = [];
@@ -422,7 +484,12 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function renderTabView(tab) {
         switch (tab) {
-            case 'dashboard': renderDashboardStats(); break;
+            case 'dashboard': 
+                renderDashboardStats(); 
+                loadAllData(records => {
+                    renderMandorCharts(records);
+                });
+                break;
             case 'penyadap': renderPenyadapTable(); break;
             case 'monitoring': renderMonitoringTab(); break;
             case 'petak': renderPetakTable(); break;
@@ -456,6 +523,60 @@ document.addEventListener('DOMContentLoaded', function () {
         animateValue(document.getElementById('stat-total-blocks'), totalBlocks, ' petak', true);
         animateValue(document.getElementById('stat-total-area'), totalArea, ' Ha', false);
         animateValue(document.getElementById('stat-avg-target'), avgTarget, ' kg', true);
+    }
+
+    function renderMandorCharts(records) {
+        const penyadapList = getFilteredActivePenyadap();
+        if (penyadapList.length === 0) return;
+
+        const names = penyadapList.map(p => p.nama);
+        const now = new Date();
+        const thisYear = now.getFullYear();
+        const thisMonth = now.getMonth();
+
+        // Chart: Target Bulanan per Periode (P1 vs P2)
+        const p1Actuals = penyadapList.map(p => {
+            return records.filter(r => {
+                const d = new Date(r.tanggal);
+                return r.nama_penyadap === p.nama && d.getFullYear() === thisYear && d.getMonth() === thisMonth && d.getDate() <= 15;
+            }).reduce((s, r) => s + r.estimasi_hasil, 0);
+        });
+        const p2Actuals = penyadapList.map(p => {
+            return records.filter(r => {
+                const d = new Date(r.tanggal);
+                return r.nama_penyadap === p.nama && d.getFullYear() === thisYear && d.getMonth() === thisMonth && d.getDate() > 15;
+            }).reduce((s, r) => s + r.estimasi_hasil, 0);
+        });
+        
+        const p1Targets = penyadapList.map(p => (parseFloat(p.periode1) || 0));
+        const p2Targets = penyadapList.map(p => (parseFloat(p.periode2) || 0));
+
+        initChart('chartTargetBulananMandor', 'bar', {
+            labels: names,
+            datasets: [
+                { label: 'P1 Aktual (1-15)', data: p1Actuals.map(v => +v.toFixed(1)), backgroundColor: GA, borderRadius: 4 },
+                { label: 'P1 Target', data: p1Targets, backgroundColor: 'rgba(82,183,136,0.2)', borderColor: GA, borderWidth: 1, borderRadius: 4 },
+                { label: 'P2 Aktual (16-31)', data: p2Actuals.map(v => +v.toFixed(1)), backgroundColor: Y, borderRadius: 4 },
+                { label: 'P2 Target', data: p2Targets, backgroundColor: 'rgba(244,162,97,0.2)', borderColor: Y, borderWidth: 1, borderRadius: 4 },
+            ]
+        }, { 
+            responsive: true, 
+            maintainAspectRatio: false, 
+            plugins: { 
+                legend: { position: 'top' },
+                tooltip: {
+                    callbacks: {
+                        footer: (items) => {
+                            const idx = items[0].dataIndex;
+                            const p1Pct = p1Targets[idx] > 0 ? (p1Actuals[idx] / p1Targets[idx] * 100).toFixed(1) : 0;
+                            const p2Pct = p2Targets[idx] > 0 ? (p2Actuals[idx] / p2Targets[idx] * 100).toFixed(1) : 0;
+                            return `Prog P1: ${p1Pct}%\nProg P2: ${p2Pct}%`;
+                        }
+                    }
+                }
+            }, 
+            scales: { y: { beginAtZero: true } } 
+        });
     }
 
     function animateValue(el, end, suffix = '', isInt = false) {

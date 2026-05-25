@@ -7,6 +7,7 @@
     <title>SIPENA PINUS - Panel Mandor Lapangan</title>
     <meta name="description" content="Sistem Kelola Penyadap, Petak, dan Target Produksi Lapangan bagi Mandor">
     <link rel="stylesheet" href="assets/css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <!-- Custom styling to enhance mandor dashboard view -->
     <style>
         .target-derived-box {
@@ -303,6 +304,24 @@
                     <p style="font-size: 0.85rem; color: var(--text-muted);">
                         *Data penugasan mandor dan petak hanya dapat diubah oleh Pimpinan melalui Dashboard Utama.
                     </p>
+                </div>
+
+                <!-- Mandor Progress Chart -->
+                <div class="card-chart" style="margin-top: 24px; border: 1.5px solid var(--primary-light);">
+                    <div class="chart-header" style="border-bottom: 1px solid var(--border); padding-bottom: 12px; margin-bottom: 16px;">
+                        <div class="chart-title" style="font-weight: 700; color: var(--primary); display: flex; align-items: center; gap: 8px;">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                                <line x1="16" y1="2" x2="16" y2="6"></line>
+                                <line x1="8" y1="2" x2="8" y2="6"></line>
+                                <line x1="3" y1="10" x2="21" y2="10"></line>
+                            </svg>
+                            Progress Target Bulanan (P1 vs P2)
+                        </div>
+                    </div>
+                    <div class="chart-container" style="height: 320px; position: relative;">
+                        <canvas id="chartTargetBulananMandor"></canvas>
+                    </div>
                 </div>
             </div>
 
