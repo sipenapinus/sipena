@@ -520,6 +520,15 @@ document.addEventListener('DOMContentLoaded', function () {
                         }
 
                         // Sync Metadata tables if present
+                        if (res.bkph && Array.isArray(res.bkph)) {
+                            lsSet(LS.BKPH, res.bkph);
+                        }
+                        if (res.rph && Array.isArray(res.rph)) {
+                            lsSet(LS.RPH, res.rph);
+                        }
+                        if (res.tpg && Array.isArray(res.tpg)) {
+                            lsSet(LS.TPG, res.tpg);
+                        }
                         if (res.penyadap && Array.isArray(res.penyadap)) {
                             lsSet(LS.PENYADAP, res.penyadap);
                         }
@@ -531,6 +540,9 @@ document.addEventListener('DOMContentLoaded', function () {
                         }
                         if (res.targets && Array.isArray(res.targets)) {
                             lsSet(LS.TARGET, res.targets);
+                        }
+                        if (res.users && Array.isArray(res.users)) {
+                            lsSet(LS.USER, res.users);
                         }
                         if (res.monitoring && typeof res.monitoring === 'object') {
                             lsSet(LS.MONITORING, res.monitoring);
