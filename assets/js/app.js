@@ -8,28 +8,33 @@ const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwTelvmwcTnXUKYx_CQ
 document.addEventListener('DOMContentLoaded', function () {
 
     // Color constants for charts
-    const G  = '#1b4332'; // Dark green
+    const G = '#1b4332'; // Dark green
     const GA = '#40916c'; // Actual green
     const GL = '#52b788'; // Light green
-    const Y  = '#f4a261'; // Orange/Yellow
-    const R  = '#e76f51'; // Red
+    const Y = '#f4a261'; // Orange/Yellow
+    const R = '#e76f51'; // Red
 
     // ======================== STATE MANAGEMENT ========================
     // Kunci localStorage
     const LS = {
+        BKPH: 'sipena_bkph',
+        RPH: 'sipena_rph',
+        TPG: 'sipena_tpg',
+        PETAK: 'sipena_petak',
+        MANDOR: 'sipena_mandor',
         PENYADAP: 'sipena_penyadap',
-        PETAK:    'sipena_petak',
-        TARGET:   'sipena_targets',
+        TARGET: 'sipena_targets',
+        USER: 'sipena_users_list',
         MONITORING: 'sipena_monitoring',
         DEMO_DATA: 'sipena_demo_entries',
         CLOUD_CACHE: 'sipena_last_dashboard_data',
-        MANDOR:   'sipena_mandor',
+        AUTH_USER: 'sipena_auth_user'
     };
 
     // State global
     let globalRecords = [];
-    let mapDataCache  = [];
-    let charts        = {};
+    let mapDataCache = [];
+    let charts = {};
     let monitoringData = {}; // {tanggal: {namapenyadap: {status, keterangan}}}
 
     // ======================== HELPER: STORAGE ========================
@@ -37,100 +42,124 @@ document.addEventListener('DOMContentLoaded', function () {
         try { return JSON.parse(localStorage.getItem(key)); } catch { return null; }
     }
     function lsSet(key, val) {
-        try { localStorage.setItem(key, JSON.stringify(val)); } catch {}
+        try { localStorage.setItem(key, JSON.stringify(val)); } catch { }
     }
 
     function migrateLocalStorageData() {
-        // 1. Migrate Petak
-        let petakList = lsGet(LS.PETAK);
-        if (petakList && Array.isArray(petakList)) {
-            let updated = false;
-            const defaults = {
-                'P.01': 1200,
-                'P.02': 1500,
-                'P.03': 1000,
-                'P.04': 1300,
-                'P.05': 1100,
-                'P.06': 1400
-            };
-            petakList = petakList.map(b => {
-                if (b.pohon === undefined || b.pohon === null || parseInt(b.pohon) <= 0) {
-                    b.pohon = defaults[b.kode] || 1000;
-                    updated = true;
-                }
-                return b;
-            });
-            if (updated) {
-                lsSet(LS.PETAK, petakList);
-            }
-        }
+        if (!localStorage.getItem(LS.BKPH)) lsSet(LS.BKPH, getBkphList());
+        if (!localStorage.getItem(LS.RPH)) lsSet(LS.RPH, getRphList());
+        if (!localStorage.getItem(LS.TPG)) lsSet(LS.TPG, getTpgList());
+        if (!localStorage.getItem(LS.PETAK)) lsSet(LS.PETAK, getPetakList());
+        if (!localStorage.getItem(LS.MANDOR)) lsSet(LS.MANDOR, getMandorList());
+        if (!localStorage.getItem(LS.PENYADAP)) lsSet(LS.PENYADAP, getPenyadapList());
+        if (!localStorage.getItem(LS.TARGET)) lsSet(LS.TARGET, getTargetList());
+        if (!localStorage.getItem(LS.USER)) lsSet(LS.USER, getUserList());
+    }
 
-        // 2. Migrate Penyadap
-        let penyadapList = lsGet(LS.PENYADAP);
-        if (penyadapList && Array.isArray(penyadapList)) {
-            let updated = false;
-            const defaults = {
-                'Slamet': 800,
-                'Budi': 1000,
-                'Sukijo': 700,
-                'Tukimin': 900,
-                'Wawan': 800,
-                'Kardi': 950
-            };
-            penyadapList = penyadapList.map(p => {
-                if (p.pohon === undefined || p.pohon === null || parseInt(p.pohon) <= 0) {
-                    p.pohon = defaults[p.nama] || 800;
-                    updated = true;
-                }
-                return p;
-            });
-            if (updated) {
-                lsSet(LS.PENYADAP, penyadapList);
-            }
-        }
+    function getBkphList() {
+        const cached = lsGet(LS.BKPH);
+        if (WEB_APP_URL && cached && cached.length) return cached;
+        return cached || [
+            { id_bkph: 'b1', kode_bkph: 'BKPH-BTR', nama_bkph: 'BKPH Bantarkawung', status: 'Aktif' }
+        ];
+    }
+
+    function getRphList() {
+        const cached = lsGet(LS.RPH);
+        if (WEB_APP_URL && cached && cached.length) return cached;
+        return cached || [
+            { id_rph: 'r1', kode_rph: 'RPH-CKN', nama_rph: 'RPH Cikuning', id_bkph: 'b1', status: 'Aktif' },
+            { id_rph: 'r2', kode_rph: 'RPH-TBS', nama_rph: 'RPH TB. Serang', id_bkph: 'b1', status: 'Aktif' },
+            { id_rph: 'r3', kode_rph: 'RPH-TLG', nama_rph: 'RPH Telaga', id_bkph: 'b1', status: 'Aktif' },
+            { id_rph: 'r4', kode_rph: 'RPH-BJS', nama_rph: 'RPH Banjarsari', id_bkph: 'b1', status: 'Aktif' },
+            { id_rph: 'r5', kode_rph: 'RPH-KNS', nama_rph: 'RPH Kalinusu', id_bkph: 'b1', status: 'Aktif' }
+        ];
+    }
+
+    function getTpgList() {
+        const cached = lsGet(LS.TPG);
+        if (WEB_APP_URL && cached && cached.length) return cached;
+        return cached || [
+            { id_tpg: 't1', kode_tpg: 'TPG-CKN', nama_tpg: 'Cikuning', id_rph: 'r1', status: 'Aktif' },
+            { id_tpg: 't2', kode_tpg: 'TPG-TRL', nama_tpg: 'Terlaya', id_rph: 'r1', status: 'Aktif' },
+            { id_tpg: 't3', kode_tpg: 'TPG-JPG', nama_tpg: 'Jipang', id_rph: 'r1', status: 'Aktif' },
+            { id_tpg: 't4', kode_tpg: 'TPG-BBY', nama_tpg: 'Bangbayang', id_rph: 'r1', status: 'Aktif' },
+            { id_tpg: 't5', kode_tpg: 'TPG-MYN', nama_tpg: 'Mayana', id_rph: 'r1', status: 'Aktif' },
+            { id_tpg: 't6', kode_tpg: 'TPG-LGK', nama_tpg: 'Legok', id_rph: 'r2', status: 'Aktif' },
+            { id_tpg: 't7', kode_tpg: 'TPG-CKG', nama_tpg: 'Cukanggaleh', id_rph: 'r2', status: 'Aktif' },
+            { id_tpg: 't8', kode_tpg: 'TPG-BTR', nama_tpg: 'Bantarkawung', id_rph: 'r2', status: 'Aktif' },
+            { id_tpg: 't9', kode_tpg: 'TPG-SMD', nama_tpg: 'Samudra', id_rph: 'r2', status: 'Aktif' },
+            { id_tpg: 't10', kode_tpg: 'TPG-TGG', nama_tpg: 'Tegongan', id_rph: 'r2', status: 'Aktif' },
+            { id_tpg: 't11', kode_tpg: 'TPG-LMN', nama_tpg: 'Lemahngebul', id_rph: 'r2', status: 'Aktif' },
+            { id_tpg: 't12', kode_tpg: 'TPG-PRS', nama_tpg: 'Parasi', id_rph: 'r3', status: 'Aktif' },
+            { id_tpg: 't13', kode_tpg: 'TPG-TNJ', nama_tpg: 'Tanjung', id_rph: 'r3', status: 'Aktif' },
+            { id_tpg: 't14', kode_tpg: 'TPG-BJS', nama_tpg: 'Banjarsari', id_rph: 'r4', status: 'Aktif' },
+            { id_tpg: 't15', kode_tpg: 'TPG-KLJ', nama_tpg: 'Kalijurang', id_rph: 'r5', status: 'Aktif' },
+            { id_tpg: 't16', kode_tpg: 'TPG-KRD', nama_tpg: 'Karangdempul', id_rph: 'r5', status: 'Aktif' },
+            { id_tpg: 't17', kode_tpg: 'TPG-HLR', nama_tpg: 'Hilir', id_rph: 'r5', status: 'Aktif' }
+        ];
     }
 
     function getMandorList() {
         const cached = lsGet(LS.MANDOR);
-        // Jika ada URL Cloud, JANGAN gunakan data demo hardcoded jika cache kosong
-        if (WEB_APP_URL) return cached || [];
-        
+        if (WEB_APP_URL && cached && cached.length) return cached;
         return cached || [
-            { id: 'm1', nama: 'Mandor Wawan', nik: '001', petak: ['P.01', 'P.03'] },
-            { id: 'm2', nama: 'Mandor Budi',  nik: '002', petak: ['P.02', 'P.04'] },
-            { id: 'm3', nama: 'Mandor Kardi', nik: '003', petak: ['P.05', 'P.06'] },
+            { id_mandor: 'm1', nama_mandor: 'Mandor Wawan', nik: '001', nomor_hp: '08123456789', id_tpg: 't1', status: 'Aktif', id: 'm1', nama: 'Mandor Wawan', petak: ['P.01', 'P.03'] },
+            { id_mandor: 'm2', nama_mandor: 'Mandor Budi', nik: '002', nomor_hp: '08123456780', id_tpg: 't6', status: 'Aktif', id: 'm2', nama: 'Mandor Budi', petak: ['P.02', 'P.04'] },
+            { id_mandor: 'm3', nama_mandor: 'Mandor Kardi', nik: '003', nomor_hp: '08123456781', id_tpg: 't15', status: 'Aktif', id: 'm3', nama: 'Mandor Kardi', petak: ['P.05', 'P.06'] }
         ];
     }
 
     function getPenyadapList() {
         const cached = lsGet(LS.PENYADAP);
-        if (WEB_APP_URL) return cached || [];
-
+        if (WEB_APP_URL && cached && cached.length) return cached;
         return cached || [
-            { id: 'p1', nama: 'Slamet',  petak: 'P.01', status: 'Aktif', pohon: 800 },
-            { id: 'p2', nama: 'Budi',    petak: 'P.02', status: 'Aktif', pohon: 1000 },
-            { id: 'p3', nama: 'Sukijo',  petak: 'P.03', status: 'Aktif', pohon: 700 },
-            { id: 'p4', nama: 'Tukimin', petak: 'P.04', status: 'Aktif', pohon: 900 },
-            { id: 'p5', nama: 'Wawan',   petak: 'P.05', status: 'Aktif', pohon: 800 },
-            { id: 'p6', nama: 'Kardi',   petak: 'P.06', status: 'Aktif', pohon: 950 },
+            { id_penyadap: 'p1', nama_penyadap: 'Slamet', id_mandor: 'm1', id_petak: 'b1', status: 'Aktif', pohon: 800, luas: 2.5, target: 3600, periode1: 150, periode2: 150, id: 'p1', nama: 'Slamet', petak: 'P.01' },
+            { id_penyadap: 'p2', nama_penyadap: 'Budi', id_mandor: 'm2', id_petak: 'b2', status: 'Aktif', pohon: 1000, luas: 3.0, target: 3600, periode1: 150, periode2: 150, id: 'p2', nama: 'Budi', petak: 'P.02' },
+            { id_penyadap: 'p3', nama_penyadap: 'Sukijo', id_mandor: 'm1', id_petak: 'b3', status: 'Aktif', pohon: 700, luas: 2.0, target: 3600, periode1: 150, periode2: 150, id: 'p3', nama: 'Sukijo', petak: 'P.03' },
+            { id_penyadap: 'p4', nama_penyadap: 'Tukimin', id_mandor: 'm2', id_petak: 'b2', status: 'Aktif', pohon: 900, luas: 2.8, target: 3600, periode1: 150, periode2: 150, id: 'p4', nama: 'Tukimin', petak: 'P.02' },
+            { id_penyadap: 'p5', nama_penyadap: 'Wawan', id_mandor: 'm3', id_petak: 'b5', status: 'Aktif', pohon: 800, luas: 2.4, target: 3600, periode1: 150, periode2: 150, id: 'p5', nama: 'Wawan', petak: 'P.05' },
+            { id_penyadap: 'p6', nama_penyadap: 'Kardi', id_mandor: 'm3', id_petak: 'b6', status: 'Aktif', pohon: 950, luas: 3.1, target: 3600, periode1: 150, periode2: 150, id: 'p6', nama: 'Kardi', petak: 'P.06' }
         ];
     }
 
     function getPetakList() {
         const cached = lsGet(LS.PETAK);
-        if (WEB_APP_URL) return cached || [];
-
+        if (WEB_APP_URL && cached && cached.length) return cached;
         return cached || [
-            { id: 'b1', kode: 'P.01', luas: 12.5, pohon: 1200 },
-            { id: 'b2', kode: 'P.02', luas: 15.0, pohon: 1500 },
-            { id: 'b3', kode: 'P.03', luas: 10.0, pohon: 1000 },
-            { id: 'b4', kode: 'P.04', luas: 13.0, pohon: 1300 },
-            { id: 'b5', kode: 'P.05', luas: 11.5, pohon: 1100 },
-            { id: 'b6', kode: 'P.06', luas: 14.0, pohon: 1400 },
+            { id_petak: 'b1', nomor_petak: 'P.01', anak_petak: '', luas: 12.5, id_tpg: 't1', pohon: 1200, status: 'Aktif', id: 'b1', kode: 'P.01' },
+            { id_petak: 'b2', nomor_petak: 'P.02', anak_petak: '', luas: 15.0, id_tpg: 't6', pohon: 1500, status: 'Aktif', id: 'b2', kode: 'P.02' },
+            { id_petak: 'b3', nomor_petak: 'P.03', anak_petak: '', luas: 10.0, id_tpg: 't12', pohon: 1000, status: 'Aktif', id: 'b3', kode: 'P.03' },
+            { id_petak: 'b4', nomor_petak: 'P.04', anak_petak: '', luas: 13.0, id_tpg: 't14', pohon: 1300, status: 'Aktif', id: 'b4', kode: 'P.04' },
+            { id_petak: 'b5', nomor_petak: 'P.05', anak_petak: '', luas: 11.5, id_tpg: 't15', pohon: 1100, status: 'Aktif', id: 'b5', kode: 'P.05' },
+            { id_petak: 'b6', nomor_petak: 'P.06', anak_petak: '', luas: 14.0, id_tpg: 't2', pohon: 1400, status: 'Aktif', id: 'b6', kode: 'P.06' }
         ];
     }
 
-    function getTargetList() { return lsGet(LS.TARGET) || []; }
+    function getUserList() {
+        const cached = lsGet(LS.USER);
+        if (WEB_APP_URL && cached && cached.length) return cached;
+        return cached || [
+            { id_user: 'u1', nama: 'Admin Perhutani', username: 'admin', password: 'admin', role: 'Admin BKPH', wilayah_akses: 'ALL', status: 'Aktif' },
+            { id_user: 'u2', nama: 'KRPH Cikuning', username: 'krph', password: 'krph', role: 'KRPH / ASPER', wilayah_akses: 'RPH Cikuning', status: 'Aktif' },
+            { id_user: 'u3', nama: 'Pimpinan Perhutani', username: 'pimpinan', password: 'pimpinan', role: 'Pimpinan', wilayah_akses: 'ALL', status: 'Aktif' }
+        ];
+    }
+
+    function getTargetList() {
+        const cached = lsGet(LS.TARGET);
+        if (WEB_APP_URL && cached && cached.length) return cached;
+        return cached || [
+            { id_target: 't-P.01-2026', petak: 'P.01', tahun: '2026', tahunan: 3600, periode1: 150, periode2: 150, id_bkph: 'b1', id_rph: 'r1', id_tpg: 't1', status: 'Aktif' },
+            { id_target: 't-P.02-2026', petak: 'P.02', tahun: '2026', tahunan: 3600, periode1: 150, periode2: 150, id_bkph: 'b1', id_rph: 'r2', id_tpg: 't6', status: 'Aktif' },
+            { id_target: 't-P.03-2026', petak: 'P.03', tahun: '2026', tahunan: 3600, periode1: 150, periode2: 150, id_bkph: 'b1', id_rph: 'r3', id_tpg: 't12', status: 'Aktif' },
+            { id_target: 't-P.04-2026', petak: 'P.04', tahun: '2026', tahunan: 3600, periode1: 150, periode2: 150, id_bkph: 'b1', id_rph: 'r4', id_tpg: 't14', status: 'Aktif' },
+            { id_target: 't-P.05-2026', petak: 'P.05', tahun: '2026', tahunan: 3600, periode1: 150, periode2: 150, id_bkph: 'b1', id_rph: 'r5', id_tpg: 't15', status: 'Aktif' },
+            { id_target: 't-P.06-2026', petak: 'P.06', tahun: '2026', tahunan: 3600, periode1: 150, periode2: 150, id_bkph: 'b1', id_rph: 'r1', id_tpg: 't2', status: 'Aktif' }
+        ];
+    }
+
+
     function getMonitoringData() { return lsGet(LS.MONITORING) || {}; }
 
     // Penyadap aktif saja
@@ -170,6 +199,100 @@ document.addEventListener('DOMContentLoaded', function () {
         toastTimer = setTimeout(() => { t.style.display = 'none'; }, 3500);
     }
 
+    // ======================== HELPER: OFFLINE CRUD QUEUE ========================
+    let isSyncingOffline = false;
+    let lastToastTime = 0;
+
+    function queueOfflineCrud(actionPayload) {
+        let queue = [];
+        try {
+            queue = JSON.parse(localStorage.getItem('sipena_offline_crud')) || [];
+        } catch {
+            queue = [];
+        }
+        queue.push(actionPayload);
+        localStorage.setItem('sipena_offline_crud', JSON.stringify(queue));
+        if (!navigator.onLine) {
+            showToast('📶 Disimpan offline. Akan disinkronkan saat terhubung internet.', 'warning');
+        }
+    }
+
+    function dequeueOfflineCrud() {
+        try {
+            let queue = JSON.parse(localStorage.getItem('sipena_offline_crud')) || [];
+            if (queue.length > 0) {
+                queue.shift();
+                localStorage.setItem('sipena_offline_crud', JSON.stringify(queue));
+            }
+        } catch (e) {
+            console.error("Gagal dequeue offline crud:", e);
+        }
+    }
+
+    function syncOfflineCrud(callback) {
+        if (isSyncingOffline) {
+            setTimeout(() => {
+                syncOfflineCrud(callback);
+            }, 1000);
+            return;
+        }
+
+        let queue = [];
+        try {
+            queue = JSON.parse(localStorage.getItem('sipena_offline_crud')) || [];
+        } catch {
+            queue = [];
+        }
+
+        if (queue.length === 0) {
+            if (callback) callback();
+            return;
+        }
+
+        isSyncingOffline = true;
+        console.log(`Menyinkronkan ${queue.length} aksi CRUD admin offline ke Google Sheets...`);
+        let promiseChain = Promise.resolve();
+        let syncedCount = 0;
+
+        queue.forEach((payload, index) => {
+            promiseChain = promiseChain.then(() => {
+                return fetch(WEB_APP_URL, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    body: JSON.stringify(payload)
+                }).then(() => {
+                    syncedCount++;
+                    dequeueOfflineCrud();
+                });
+            });
+        });
+
+        promiseChain.then(() => {
+            isSyncingOffline = false;
+            if (syncedCount > 0) {
+                lastToastTime = Date.now();
+                showToast(`🔄 Berhasil sinkron ${syncedCount} data offline ke Google Sheets!`, 'success');
+            }
+            if (callback) callback();
+        }).catch(err => {
+            isSyncingOffline = false;
+            console.error("Gagal sinkron aksi offline admin:", err);
+            if (callback) callback();
+        });
+    }
+
+    window.addEventListener('online', () => {
+        showToast('📶 Koneksi terhubung kembali. Mensinkronkan data offline...', 'success');
+        syncOfflineCrud(() => {
+            loadAllData(() => {
+                const activeItem = document.querySelector('.sidebar-menu li.active');
+                const activeTab = activeItem ? activeItem.getAttribute('data-tab') : 'dashboard';
+                renderTabView(activeTab);
+            });
+        });
+    });
+
+
     // ======================== HELPER: MODAL ========================
     function openModal(id) { document.getElementById(id)?.classList.add('active'); }
     function closeModal(id) { document.getElementById(id)?.classList.remove('active'); }
@@ -179,11 +302,11 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     // ======================== 1. TAB ROUTING ========================
-    const sidebar     = document.getElementById('sidebar');
-    const menuToggle  = document.getElementById('menuToggle');
-    const menuItems   = document.querySelectorAll('.sidebar-menu li');
+    const sidebar = document.getElementById('sidebar');
+    const menuToggle = document.getElementById('menuToggle');
+    const menuItems = document.querySelectorAll('.sidebar-menu li');
     const tabContents = document.querySelectorAll('.tab-content');
-    const pageTitle   = document.getElementById('pageTitle');
+    const pageTitle = document.getElementById('pageTitle');
     const pageSubtitle = document.getElementById('pageSubtitle');
 
     if (menuToggle) {
@@ -219,31 +342,31 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     const pageTitles = {
-        dashboard:   ['Dashboard Monitoring', 'Sistem Monitoring Produksi Getah Berbasis Mandor & Wilayah Sadap'],
-        pimpinan:    ['Dashboard Pimpinan',   'Evaluasi Kinerja Mandor & Progress Target Produksi'],
-        mandor:      ['Kelola Mandor',         'Manajemen Penyadap, Petak Sadap, dan Target Produksi'],
-        'petak-target':['Kelola Petak & Target', 'Atur Kapasitas Petak Lahan & Target Bulanan/Tahunan Produksi'],
-        monitoring:  ['Monitoring Harian',     'Pantau Kehadiran & Status Penyadap Setiap Hari'],
-        'input-data':['Input Data Lapangan',  'Formulir Input Data Produksi bagi Mandor di Lapangan'],
-        'peta-wilayah':['Pemetaan Wilayah Sadap', 'Visualisasi Status Produktivitas dan Kondisi Petak Hutan Pinus'],
-        laporan:     ['Laporan & Evaluasi Produksi', 'Tabel Rekapitulasi Data dan Ekspor Laporan Produksi'],
+        dashboard: ['Dashboard Monitoring', 'Sistem Monitoring Produksi Getah Berbasis Mandor & Wilayah Sadap'],
+        pimpinan: ['Dashboard Pimpinan', 'Evaluasi Kinerja Mandor & Progress Target Produksi'],
+        mandor: ['Kelola Mandor', 'Manajemen Penyadap, Petak Sadap, dan Target Produksi'],
+        'petak-target': ['Kelola Petak & Target', 'Atur Kapasitas Petak Lahan & Target Bulanan/Tahunan Produksi'],
+        monitoring: ['Monitoring Harian', 'Pantau Kehadiran & Status Penyadap Setiap Hari'],
+        'input-data': ['Input Data Lapangan', 'Formulir Input Data Produksi bagi Mandor di Lapangan'],
+        'peta-wilayah': ['Pemetaan Wilayah Sadap', 'Visualisasi Status Produktivitas dan Kondisi Petak Hutan Pinus'],
+        laporan: ['Laporan & Evaluasi Produksi', 'Tabel Rekapitulasi Data dan Ekspor Laporan Produksi'],
     };
 
     function updatePageHeader(tab) {
         const t = pageTitles[tab] || ['Dashboard', ''];
-        if (pageTitle)    pageTitle.textContent    = t[0];
+        if (pageTitle) pageTitle.textContent = t[0];
         if (pageSubtitle) pageSubtitle.textContent = t[1];
     }
 
     function renderTabView(tab) {
         switch (tab) {
-            case 'dashboard':   renderDashboard(globalRecords); break;
-            case 'pimpinan':    renderPimpinan(globalRecords);  break;
-            case 'mandor':      renderMandorTab();              break;
-            case 'petak-target': renderPetakTargetTable();      break;
-            case 'monitoring':  renderMonitoringTab();          break;
-            case 'peta-wilayah': renderMap(globalRecords);      break;
-            case 'laporan':     renderReportTable(globalRecords); break;
+            case 'dashboard': renderDashboard(globalRecords); break;
+            case 'pimpinan': renderPimpinan(globalRecords); break;
+            case 'mandor': renderMandorTab(); break;
+            case 'petak-target': renderPetakTargetTable(); break;
+            case 'monitoring': renderMonitoringTab(); break;
+            case 'peta-wilayah': renderMap(globalRecords); break;
+            case 'laporan': renderReportTable(globalRecords); break;
         }
     }
 
@@ -251,7 +374,7 @@ document.addEventListener('DOMContentLoaded', function () {
     function getInitialMockData() {
         const mockData = [];
         const penyadapList = getPenyadapList().filter(p => (p.status || 'Aktif') === 'Aktif');
-        const workerMap    = {};
+        const workerMap = {};
         penyadapList.forEach(p => { workerMap[p.nama] = p.petak; });
 
         const conditions = ['Normal', 'Hujan', 'Pohon Rusak', 'Wadah Rusak'];
@@ -262,7 +385,7 @@ document.addEventListener('DOMContentLoaded', function () {
             const ds = date.toISOString().split('T')[0];
 
             const shuffled = [...penyadapList].sort(() => 0.5 - Math.random());
-            const active   = shuffled.slice(0, Math.floor(Math.random() * 3) + 4);
+            const active = shuffled.slice(0, Math.floor(Math.random() * 3) + 4);
 
             active.forEach(worker => {
                 const petak = workerMap[worker.nama];
@@ -280,7 +403,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
 
                 let base = 15;
-                if (worker.nama === 'Slamet')  base = 20.5;
+                if (worker.nama === 'Slamet') base = 20.5;
                 else if (worker.nama === 'Sukijo') base = 14 - ((30 - i) / 30) * 6.5;
                 else if (worker.nama === 'Wawan') base = 4.5;
 
@@ -307,7 +430,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function loadAllData(callback) {
         const cloudBanner = document.getElementById('cloudConnectionBanner');
-        const demoBanner  = document.getElementById('demoModeBanner');
+        const demoBanner = document.getElementById('demoModeBanner');
 
         // Reset banners
         if (cloudBanner) {
@@ -341,7 +464,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 cloudBanner.querySelector('span:first-child').style.backgroundColor = '#c62828';
                 cloudBanner.querySelector('span:last-child').textContent = errorMsg || 'Gagal terhubung ke Cloud. Menggunakan data terakhir.';
             }
-            
+
             let cached = lsGet(LS.CLOUD_CACHE);
             if (!cached || !cached.length) {
                 // Jika tidak ada cache sama sekali, baru gunakan mock tapi beri peringatan
@@ -353,6 +476,19 @@ document.addEventListener('DOMContentLoaded', function () {
         };
 
         if (navigator.onLine) {
+            // Cek jika ada antrean offline crud. Jika ada, jangan timpa local storage agar data lokal tidak terhapus.
+            let queue = [];
+            try {
+                queue = JSON.parse(localStorage.getItem('sipena_offline_crud')) || [];
+            } catch {
+                queue = [];
+            }
+            if (queue.length > 0) {
+                console.log("Ada antrean offline CRUD admin. Menunda sinkronisasi cloud agar data lokal tidak terhapus.");
+                fallback('Ada data offline belum tersinkron. Menunda sinkronisasi cloud.');
+                return;
+            }
+
             fetch(WEB_APP_URL)
                 .then(r => {
                     if (!r.ok) throw new Error(`HTTP error! status: ${r.status}`);
@@ -388,7 +524,7 @@ document.addEventListener('DOMContentLoaded', function () {
                             // Mencoba mencari key dengan case-insensitive atau variasi nama
                             const findKey = (obj, target) => {
                                 const keys = Object.keys(obj);
-                                return keys.find(k => k.toLowerCase().replace(/_/g,'') === target.toLowerCase().replace(/_/g,''));
+                                return keys.find(k => k.toLowerCase().replace(/_/g, '') === target.toLowerCase().replace(/_/g, ''));
                             };
 
                             const getVal = (obj, target) => {
@@ -397,7 +533,7 @@ document.addEventListener('DOMContentLoaded', function () {
                             };
 
                             return {
-                                id: getVal(r, 'id') || 'c-' + Math.random().toString(36).substr(2,9),
+                                id: getVal(r, 'id') || 'c-' + Math.random().toString(36).substr(2, 9),
                                 tanggal: getVal(r, 'tanggal') || '',
                                 nama_penyadap: getVal(r, 'nama_penyadap') || getVal(r, 'nama') || '',
                                 petak: getVal(r, 'petak') || getVal(r, 'kode_petak') || '',
@@ -411,13 +547,13 @@ document.addEventListener('DOMContentLoaded', function () {
                         lsSet(LS.CLOUD_CACHE, fmt);
                         globalRecords = fmt;
                         callback(fmt);
-                    } else { 
-                        fallback(res.message || 'API Google Sheets mengembalikan status error.'); 
+                    } else {
+                        fallback(res.message || 'API Google Sheets mengembalikan status error.');
                     }
                 })
                 .catch(err => fallback(`Gagal mengambil data: ${err.message}`));
-        } else { 
-            fallback('Koneksi internet terputus. Menggunakan data offline.'); 
+        } else {
+            fallback('Koneksi internet terputus. Menggunakan data offline.');
         }
     }
 
@@ -438,10 +574,10 @@ document.addEventListener('DOMContentLoaded', function () {
         const issues = records.filter(r => r.kondisi_lapangan !== 'Normal' && new Date(r.tanggal) >= d30).length;
 
         animateValue(document.getElementById('stat-total-prod'), total, ' kg');
-        animateValue(document.getElementById('stat-avg-daily'),  avg,   ' kg');
-        animateValue(document.getElementById('stat-workers'),    workers.size || 6, ' orang', true);
-        animateValue(document.getElementById('stat-blocks'),     blocks.size  || 6, ' petak', true);
-        animateValue(document.getElementById('stat-issues'),     issues, ' kasus', true);
+        animateValue(document.getElementById('stat-avg-daily'), avg, ' kg');
+        animateValue(document.getElementById('stat-workers'), workers.size || 6, ' orang', true);
+        animateValue(document.getElementById('stat-blocks'), blocks.size || 6, ' petak', true);
+        animateValue(document.getElementById('stat-issues'), issues, ' kasus', true);
 
         // Chart 1: per petak
         const petakTotals = {};
@@ -511,9 +647,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
         let html = '<option value="all">-- Semua Mandor --</option>';
         html += mandorList.map(m => `<option value="${m.id}">${m.nama}</option>`).join('');
-        
+
         select.innerHTML = html;
-        
+
         // Restore selected value if it still exists in the list
         if (currentValue === 'all' || mandorList.some(m => m.id === currentValue)) {
             select.value = currentValue;
@@ -544,13 +680,13 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         const originalPenyadapList = getActivePenyadap();
-        const originalPetakList    = getPetakList();
-        const targets      = getTargetList();
-        const monitoring   = getMonitoringData();
+        const originalPetakList = getPetakList();
+        const targets = getTargetList();
+        const monitoring = getMonitoringData();
 
         // Filter lists based on selected mandor
-        const penyadapList = selectedMandorId === 'all' 
-            ? originalPenyadapList 
+        const penyadapList = selectedMandorId === 'all'
+            ? originalPenyadapList
             : originalPenyadapList.filter(p => supervisedPetaks.includes(p.petak));
 
         const petakList = selectedMandorId === 'all'
@@ -558,16 +694,16 @@ document.addEventListener('DOMContentLoaded', function () {
             : originalPetakList.filter(b => supervisedPetaks.includes(b.kode));
 
         const now = new Date();
-        const thisYear  = now.getFullYear();
+        const thisYear = now.getFullYear();
         const thisMonth = now.getMonth();
 
         // Hitung total produksi per penyadap & petak
         const prodPerPenyadap = {};
         const prodPerPetak = {};
-        
+
         originalPenyadapList.forEach(p => { prodPerPenyadap[p.nama] = 0; });
         originalPetakList.forEach(b => { prodPerPetak[b.kode] = 0; });
-        
+
         records.forEach(r => {
             if (prodPerPenyadap.hasOwnProperty(r.nama_penyadap)) {
                 prodPerPenyadap[r.nama_penyadap] += r.estimasi_hasil;
@@ -621,10 +757,10 @@ document.addEventListener('DOMContentLoaded', function () {
 
                     const pct = totalTarget > 0 ? Math.min(100, (actualProd / totalTarget) * 100) : 0;
                     let grade = 'A', gradeClass = 'a', cardClass = '';
-                    if (pct >= 90)      { grade = 'A'; gradeClass = 'a'; }
+                    if (pct >= 90) { grade = 'A'; gradeClass = 'a'; }
                     else if (pct >= 70) { grade = 'B'; gradeClass = 'b'; }
                     else if (pct >= 50) { grade = 'C'; gradeClass = 'c'; cardClass = 'kuning'; }
-                    else                { grade = 'D'; gradeClass = 'd'; cardClass = 'merah'; }
+                    else { grade = 'D'; gradeClass = 'd'; cardClass = 'merah'; }
 
                     const barClass = pct >= 90 ? 'over' : pct < 50 ? 'under' : '';
 
@@ -690,10 +826,10 @@ document.addEventListener('DOMContentLoaded', function () {
 
                     const pct = totalTarget > 0 ? Math.min(100, (actualProd / totalTarget) * 100) : 0;
                     let grade = 'A', gradeClass = 'a', cardClass = '';
-                    if (pct >= 90)      { grade = 'A'; gradeClass = 'a'; }
+                    if (pct >= 90) { grade = 'A'; gradeClass = 'a'; }
                     else if (pct >= 70) { grade = 'B'; gradeClass = 'b'; }
                     else if (pct >= 50) { grade = 'C'; gradeClass = 'c'; cardClass = 'kuning'; }
-                    else                { grade = 'D'; gradeClass = 'd'; cardClass = 'merah'; }
+                    else { grade = 'D'; gradeClass = 'd'; cardClass = 'merah'; }
 
                     const barClass = pct >= 90 ? 'over' : pct < 50 ? 'under' : '';
 
@@ -757,7 +893,7 @@ document.addEventListener('DOMContentLoaded', function () {
         // Update tapper section title
         const tapperSectionTitle = document.getElementById('tapperSectionTitle');
         if (tapperSectionTitle) {
-            tapperSectionTitle.textContent = selectedMandorId === 'all' 
+            tapperSectionTitle.textContent = selectedMandorId === 'all'
                 ? 'Daftar Penyadap yang Diawasi (Semua Mandor)'
                 : `Daftar Penyadap di Bawah Pengawasan ${activeMandorObj ? activeMandorObj.nama : ''}`;
         }
@@ -771,15 +907,15 @@ document.addEventListener('DOMContentLoaded', function () {
             } else {
                 penyadapList.forEach(p => {
                     const target = targets.find(t => t.petak === p.petak && parseInt(t.tahun) === thisYear);
-                    const targetTahunan    = target ? parseFloat(target.tahunan)  : 3600;
+                    const targetTahunan = target ? parseFloat(target.tahunan) : 3600;
                     const actual = prodPerPenyadap[p.nama] || 0;
-                    const pct    = targetTahunan > 0 ? Math.min(100, (actual / targetTahunan) * 100) : 0;
+                    const pct = targetTahunan > 0 ? Math.min(100, (actual / targetTahunan) * 100) : 0;
 
                     let grade = 'A', gradeClass = 'a', cardClass = '';
-                    if (pct >= 90)      { grade = 'A'; gradeClass = 'a'; }
+                    if (pct >= 90) { grade = 'A'; gradeClass = 'a'; }
                     else if (pct >= 70) { grade = 'B'; gradeClass = 'b'; }
                     else if (pct >= 50) { grade = 'C'; gradeClass = 'c'; cardClass = 'kuning'; }
-                    else                { grade = 'D'; gradeClass = 'd'; cardClass = 'merah'; }
+                    else { grade = 'D'; gradeClass = 'd'; cardClass = 'merah'; }
 
                     const barClass = pct >= 90 ? 'over' : pct < 50 ? 'under' : '';
                     const absInfo = absPerPenyadap[p.nama] || {};
@@ -836,9 +972,9 @@ document.addEventListener('DOMContentLoaded', function () {
         }, { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top' } }, scales: { y: { beginAtZero: true } } });
 
         // Chart 2: Target Tahunan per Penyadap
-        const names  = penyadapList.map(p => p.nama);
+        const names = penyadapList.map(p => p.nama);
         const actuals = names.map(n => +(prodPerPenyadap[n] || 0).toFixed(1));
-        const tgts   = penyadapList.map(p => {
+        const tgts = penyadapList.map(p => {
             const t = targets.find(x => x.petak === p.petak && parseInt(x.tahun) === thisYear);
             return t ? parseFloat(t.tahunan) : 3600;
         });
@@ -847,7 +983,7 @@ document.addEventListener('DOMContentLoaded', function () {
             labels: names,
             datasets: [
                 { label: 'Aktual (kg)', data: actuals, backgroundColor: GL, borderRadius: 6 },
-                { label: 'Target (kg)',  data: tgts,    backgroundColor: 'rgba(27,67,50,0.1)', borderColor: G, borderWidth: 1.5, borderRadius: 6 }
+                { label: 'Target (kg)', data: tgts, backgroundColor: 'rgba(27,67,50,0.1)', borderColor: G, borderWidth: 1.5, borderRadius: 6 }
             ]
         }, { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top' } }, scales: { y: { beginAtZero: true } } });
 
@@ -864,7 +1000,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 return r.nama_penyadap === p.nama && d.getFullYear() === thisYear && d.getMonth() === thisMonth && d.getDate() > 15;
             }).reduce((s, r) => s + r.estimasi_hasil, 0);
         });
-        
+
         // Asumsi target bulanan dibagi 2 periode sama rata dari target bulanan di metadata penyadap
         const p1Targets = penyadapList.map(p => (parseFloat(p.periode1) || 0));
         const p2Targets = penyadapList.map(p => (parseFloat(p.periode2) || 0));
@@ -877,10 +1013,10 @@ document.addEventListener('DOMContentLoaded', function () {
                 { label: 'P2 Aktual (16-31)', data: p2Actuals.map(v => +v.toFixed(1)), backgroundColor: Y, borderRadius: 4 },
                 { label: 'P2 Target', data: p2Targets, backgroundColor: 'rgba(244,162,97,0.2)', borderColor: Y, borderWidth: 1, borderRadius: 4 },
             ]
-        }, { 
-            responsive: true, 
-            maintainAspectRatio: false, 
-            plugins: { 
+        }, {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
                 legend: { position: 'top' },
                 tooltip: {
                     callbacks: {
@@ -892,8 +1028,8 @@ document.addEventListener('DOMContentLoaded', function () {
                         }
                     }
                 }
-            }, 
-            scales: { y: { beginAtZero: true } } 
+            },
+            scales: { y: { beginAtZero: true } }
         });
 
         // Tabel ketidakhadiran
@@ -923,40 +1059,31 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function renderMandorTable() {
         const list = getMandorList();
+        const tpgs = getTpgList();
         const tbody = document.getElementById('mandorTbody');
         if (!tbody) return;
 
         if (!list.length) {
-            tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--text-muted);padding:30px;">Belum ada data mandor. Klik tombol Tambah Mandor.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:30px;">Belum ada data mandor. Klik tombol Tambah Mandor.</td></tr>';
             return;
         }
 
-        tbody.innerHTML = list.map(m => `
-            <tr>
-                <td><strong>${m.nama}</strong></td>
-                <td><code>${m.nik || '-'}</code></td>
-                <td>${m.petak && m.petak.length ? m.petak.map(p => `<code style="background:#edf2f7;padding:3px 7px;border-radius:4px;font-weight:600;margin-right:4px;">${p}</code>`).join('') : '<span style="color:var(--text-muted);font-style:italic;">Belum ada petak</span>'}</td>
-                <td style="text-align: center;">
-                    <div class="action-btns" style="display:flex; gap:8px; justify-content: center;">
-                        <button class="btn btn-outline" style="padding: 6px 12px; font-size: 0.8rem;" onclick="window.editMandor('${m.id}')">✏️ Edit</button>
-                        <button class="btn btn-outline" style="padding: 6px 12px; font-size: 0.8rem; border-color: var(--danger); color: var(--danger);" onclick="window.deleteMandor('${m.id}')">🗑️ Hapus</button>
-                    </div>
-                </td>
-            </tr>
-        `).join('');
-    }
-
-    function populateMandorPetakCheckboxes(selectedPetaks = []) {
-        const container = document.getElementById('mandorPetakCheckboxes');
-        if (!container) return;
-
-        const petakList = getPetakList();
-        container.innerHTML = petakList.map(b => {
-            const checked = selectedPetaks.includes(b.kode) ? 'checked' : '';
-            return `<label style="display: flex; align-items: center; gap: 8px; font-size: 0.9rem; cursor: pointer; color: var(--text-main);">
-                <input type="checkbox" name="mandorPetak" value="${b.kode}" ${checked}>
-                <span>${b.kode}</span>
-            </label>`;
+        tbody.innerHTML = list.map(m => {
+            const tpg = tpgs.find(t => t.id_tpg === m.id_tpg) || { nama_tpg: '-' };
+            return `
+                <tr>
+                    <td><strong>${m.nama_mandor || m.nama}</strong></td>
+                    <td><code>${m.nik || '-'}</code></td>
+                    <td><code>${m.nomor_hp || '-'}</code></td>
+                    <td><strong>${tpg.nama_tpg}</strong></td>
+                    <td style="text-align: center;">
+                        <div class="action-btns" style="display:flex; gap:8px; justify-content: center;">
+                            <button class="btn btn-outline" style="padding: 6px 12px; font-size: 0.8rem;" onclick="window.editMandor('${m.id_mandor || m.id}')">✏️ Edit</button>
+                            <button class="btn btn-outline" style="padding: 6px 12px; font-size: 0.8rem; border-color: var(--danger); color: var(--danger);" onclick="window.deleteMandor('${m.id_mandor || m.id}')">🗑️ Hapus</button>
+                        </div>
+                    </td>
+                </tr>
+            `;
         }).join('');
     }
 
@@ -964,42 +1091,42 @@ document.addEventListener('DOMContentLoaded', function () {
         document.getElementById('editMandorId').value = '';
         document.getElementById('inputNamaMandor').value = '';
         document.getElementById('inputNIKMandor').value = '';
+        document.getElementById('inputHPMandor').value = '';
+        populateTPGIndukSelect('inputTPGMandor');
+        document.getElementById('inputStatusMandor').value = 'Aktif';
         document.getElementById('modalMandorTitle').textContent = 'Tambah Mandor';
-        populateMandorPetakCheckboxes([]);
         openModal('modalMandor');
     });
 
-    window.editMandor = function(id) {
+    window.editMandor = function (id) {
         const list = getMandorList();
-        const m = list.find(x => x.id === id);
+        const m = list.find(x => x.id_mandor === id || x.id === id);
         if (!m) return;
 
-        document.getElementById('editMandorId').value = m.id;
-        document.getElementById('inputNamaMandor').value = m.nama;
+        document.getElementById('editMandorId').value = m.id_mandor || m.id;
+        document.getElementById('inputNamaMandor').value = m.nama_mandor || m.nama;
         document.getElementById('inputNIKMandor').value = m.nik || '';
+        document.getElementById('inputHPMandor').value = m.nomor_hp || '';
+        populateTPGIndukSelect('inputTPGMandor', m.id_tpg);
+        document.getElementById('inputStatusMandor').value = m.status || 'Aktif';
         document.getElementById('modalMandorTitle').textContent = 'Edit Data Mandor';
-        populateMandorPetakCheckboxes(m.petak || []);
         openModal('modalMandor');
     };
 
-    window.deleteMandor = function(id) {
+    window.deleteMandor = function (id) {
         const list = getMandorList();
-        const m = list.find(x => x.id === id);
+        const m = list.find(x => x.id_mandor === id || x.id === id);
         if (!m) return;
 
-        if (confirm(`Apakah Anda yakin ingin menghapus mandor "${m.nama}"?`)) {
-            const newList = list.filter(x => x.id !== id);
+        if (confirm(`Apakah Anda yakin ingin menghapus mandor "${m.nama_mandor || m.nama}"?`)) {
+            const newList = list.filter(x => x.id_mandor !== id && x.id !== id);
             lsSet(LS.MANDOR, newList);
             renderMandorTable();
             showToast('Mandor berhasil dihapus.', 'warning');
 
-            if (WEB_APP_URL && navigator.onLine) {
-                fetch(WEB_APP_URL, {
-                    method: 'POST',
-                    mode: 'no-cors',
-                    body: JSON.stringify({ action: 'deleteMandor', id: id })
-                }).then(() => {
-                    showToast('Data mandor berhasil dihapus dari Google Sheets!', 'warning');
+            queueOfflineCrud({ action: 'deleteMandor', id: id });
+            if (navigator.onLine) {
+                syncOfflineCrud(() => {
                     loadAllData(records => {
                         renderMandorTable();
                     });
@@ -1012,19 +1139,19 @@ document.addEventListener('DOMContentLoaded', function () {
         const id = document.getElementById('editMandorId').value;
         const nama = document.getElementById('inputNamaMandor').value.trim();
         const nik = document.getElementById('inputNIKMandor').value.trim();
-        
-        // Get checked petaks
-        const checkboxes = document.querySelectorAll('input[name="mandorPetak"]:checked');
-        const petak = Array.from(checkboxes).map(cb => cb.value);
+        const nomor_hp = document.getElementById('inputHPMandor').value.trim();
+        const id_tpg = document.getElementById('inputTPGMandor').value;
+        const status = document.getElementById('inputStatusMandor').value;
 
         if (!nama) { showToast('Nama mandor wajib diisi!', 'error'); return; }
+        if (!id_tpg) { showToast('Pilih TPG Induk!', 'error'); return; }
 
         let list = getMandorList();
         const mandorId = id || 'm' + Date.now();
-        const mandorData = { id: mandorId, nama, nik, petak };
+        const mandorData = { id_mandor: mandorId, nama_mandor: nama, nik, nomor_hp, id_tpg, status, id: mandorId, nama };
 
         if (id) {
-            const idx = list.findIndex(x => x.id === id);
+            const idx = list.findIndex(x => x.id_mandor === id || x.id === id);
             if (idx >= 0) {
                 list[idx] = mandorData;
                 showToast(`Data mandor "${nama}" berhasil diubah!`);
@@ -1038,13 +1165,9 @@ document.addEventListener('DOMContentLoaded', function () {
         closeModal('modalMandor');
         renderMandorTable();
 
-        if (WEB_APP_URL && navigator.onLine) {
-            fetch(WEB_APP_URL, {
-                method: 'POST',
-                mode: 'no-cors',
-                body: JSON.stringify({ action: 'saveMandor', data: mandorData })
-            }).then(() => {
-                showToast('Data mandor berhasil disinkronkan ke Google Sheets!');
+        queueOfflineCrud({ action: 'saveMandor', data: mandorData });
+        if (navigator.onLine) {
+            syncOfflineCrud(() => {
                 loadAllData(records => {
                     renderMandorTable();
                 });
@@ -1052,432 +1175,945 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
-    function renderPenyadapTable() {
-        const list = getPenyadapList();
-        const tbody = document.getElementById('penyadapTbody');
-        if (!tbody) return;
-        tbody.innerHTML = list.length ? list.map(p => `
-            <tr>
-                <td>
-                    <strong>${p.nama}</strong>
-                    <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 4px;">
-                        Pohon: <strong>${p.pohon || 0} ph</strong> | Luas: <strong>${p.luas ? p.luas + ' Ha' : '-'}</strong> | Target: <strong>${p.target ? p.target + ' kg/th' : '-'}</strong>
-                    </div>
-                </td>
-                <td><code style="background:#edf2f7;padding:3px 7px;border-radius:4px;">${p.petak}</code></td>
-                <td><span class="status-badge-${(p.status || 'Aktif') === 'Aktif' ? 'aktif' : 'nonaktif'}">${p.status || 'Aktif'}</span></td>
-                <td>
-                    <button class="btn-icon" title="Hapus" onclick="deletePenyadap('${p.id}')">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14H6L5 6"></path></svg>
-                    </button>
-                </td>
-            </tr>`).join('') : '<tr><td colspan="4" style="text-align:center;color:var(--text-muted);">Belum ada data penyadap</td></tr>';
+    let activeWilayahSubtab = 'petak';
+
+    // ======================== CASCADING SELECT HELPERS ========================
+    function populateBKPHIndukSelect(selectId, selectedId = '') {
+        const select = document.getElementById(selectId);
+        if (!select) return;
+        const list = getBkphList().filter(x => x.status === 'Aktif');
+        select.innerHTML = '<option value="" disabled selected>-- Pilih BKPH --</option>' +
+            list.map(x => `<option value="${x.id_bkph}" ${x.id_bkph === selectedId ? 'selected' : ''}>${x.nama_bkph}</option>`).join('');
     }
 
-    function renderPetakTable() {
-        const list  = getPetakList();
-        const penyadapList = getPenyadapList();
-        const tbody = document.getElementById('petakTbody');
-        if (!tbody) return;
-        tbody.innerHTML = list.length ? list.map(b => {
-            const assigned = penyadapList.filter(p => p.petak === b.kode).map(p => p.nama).join(', ') || '-';
-            return `<tr>
-                <td><strong>${b.kode}</strong></td>
-                <td>${assigned}</td>
-                <td>${b.luas} Ha</td>
-                <td>
-                    <button class="btn-icon" title="Hapus" onclick="deletePetak('${b.id}')">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14H6L5 6"></path></svg>
-                    </button>
-                </td>
-            </tr>`;
-        }).join('') : '<tr><td colspan="4" style="text-align:center;color:var(--text-muted);">Belum ada data petak</td></tr>';
+    function populateRPHIndukSelect(selectId, selectedId = '') {
+        const select = document.getElementById(selectId);
+        if (!select) return;
+        const list = getRphList().filter(x => x.status === 'Aktif');
+        select.innerHTML = '<option value="" disabled selected>-- Pilih RPH --</option>' +
+            list.map(x => `<option value="${x.id_rph}" ${x.id_rph === selectedId ? 'selected' : ''}>${x.nama_rph}</option>`).join('');
     }
 
-    function renderTargetTable() {
-        const targets = getTargetList();
-        const tbody   = document.getElementById('targetTbody');
-        if (!tbody) return;
-        if (!targets.length) {
-            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text-muted);">Belum ada target tersimpan</td></tr>';
-            return;
-        }
-        const penyadapList = getPenyadapList();
-        tbody.innerHTML = targets.map(t => {
-            const assigned = penyadapList.filter(p => p.petak === t.petak && (p.status || 'Aktif') === 'Aktif');
-            const perPenyadap = assigned.length > 0 ? (parseFloat(t.tahunan) / assigned.length).toFixed(0) : t.tahunan;
-            return `<tr>
-                <td><code style="background:#edf2f7;padding:3px 7px;border-radius:4px;">${t.petak}</code></td>
-                <td>${t.tahun}</td>
-                <td><strong>${parseFloat(t.tahunan).toLocaleString('id')} kg</strong></td>
-                <td>${parseFloat(perPenyadap).toLocaleString('id')} kg</td>
-                <td>${parseFloat(t.periode1).toLocaleString('id')} kg</td>
-                <td>${parseFloat(t.periode2).toLocaleString('id')} kg</td>
-            </tr>`;
-        }).join('');
+    function populateTPGIndukSelect(selectId, selectedId = '') {
+        const select = document.getElementById(selectId);
+        if (!select) return;
+        const list = getTpgList().filter(x => x.status === 'Aktif');
+        select.innerHTML = '<option value="" disabled selected>-- Pilih TPG --</option>' +
+            list.map(x => `<option value="${x.id_tpg}" ${x.id_tpg === selectedId ? 'selected' : ''}>${x.nama_tpg}</option>`).join('');
     }
 
-    function populatePetakDropdowns() {
-        const petakList = getPetakList();
-        const opts = '<option value="">-- Pilih Petak --</option>' + petakList.map(b => `<option value="${b.kode}">${b.kode}</option>`).join('');
-        ['targetPetakSelect', 'inputPetakPenyadap', 'filter-petak'].forEach(id => {
-            const el = document.getElementById(id);
-            if (el) {
-                if (id === 'filter-petak') {
-                    el.innerHTML = '<option value="">Semua Petak</option>' + petakList.map(b => `<option value="${b.kode}">${b.kode}</option>`).join('');
-                } else {
-                    el.innerHTML = opts;
-                }
+    function populateMandorSelect(selectId, selectedId = '') {
+        const select = document.getElementById(selectId);
+        if (!select) return;
+        const list = getMandorList().filter(x => x.status === 'Aktif');
+        select.innerHTML = '<option value="" disabled selected>-- Pilih Mandor --</option>' +
+            list.map(x => `<option value="${x.id_mandor}" ${x.id_mandor === selectedId ? 'selected' : ''}>${x.nama_mandor || x.nama}</option>`).join('');
+    }
+
+    function populatePetakSelect(selectId, selectedId = '') {
+        const select = document.getElementById(selectId);
+        if (!select) return;
+        const list = getPetakList().filter(x => x.status === 'Aktif');
+        select.innerHTML = '<option value="" disabled selected>-- Pilih Petak --</option>' +
+            list.map(x => `<option value="${x.id_petak}" ${x.id_petak === selectedId ? 'selected' : ''}>${x.nomor_petak || x.kode}</option>`).join('');
+    }
+
+    function initFilterCascadingSelects() {
+        const bkphSel = document.getElementById('dbFilterBKPH');
+        const rphSel = document.getElementById('dbFilterRPH');
+        const tpgSel = document.getElementById('dbFilterTPG');
+        if (!bkphSel) return;
+
+        const bkphs = getBkphList().filter(x => x.status === 'Aktif');
+        bkphSel.innerHTML = '<option value="all">-- Semua BKPH --</option>' +
+            bkphs.map(b => `<option value="${b.id_bkph}">${b.nama_bkph}</option>`).join('');
+
+        bkphSel.addEventListener('change', function () {
+            const bkphId = this.value;
+            if (bkphId === 'all') {
+                rphSel.innerHTML = '<option value="all">-- Semua RPH --</option>';
+                tpgSel.innerHTML = '<option value="all">-- Semua TPG --</option>';
+                return;
             }
+            const rphs = getRphList().filter(r => r.id_bkph === bkphId && r.status === 'Aktif');
+            rphSel.innerHTML = '<option value="all">-- Semua RPH --</option>' +
+                rphs.map(r => `<option value="${r.id_rph}">${r.nama_rph}</option>`).join('');
+            tpgSel.innerHTML = '<option value="all">-- Semua TPG --</option>';
+        });
+
+        rphSel.addEventListener('change', function () {
+            const rphId = this.value;
+            if (rphId === 'all') {
+                tpgSel.innerHTML = '<option value="all">-- Semua TPG --</option>';
+                return;
+            }
+            const tpgs = getTpgList().filter(t => t.id_rph === rphId && t.status === 'Aktif');
+            tpgSel.innerHTML = '<option value="all">-- Semua TPG --</option>' +
+                tpgs.map(t => `<option value="${t.id_tpg}">${t.nama_tpg}</option>`).join('');
         });
     }
 
-    // Expose hapus ke global
-    window.deletePenyadap = function(id) {
-        if (!confirm('Hapus penyadap ini?')) return;
-        let list = getPenyadapList().filter(p => p.id !== id);
-        lsSet(LS.PENYADAP, list);
-        renderMandorTab();
-        showToast('Penyadap dihapus.', 'warning');
-    };
-    window.deletePetak = function(id) {
-        if (!confirm('Hapus petak ini?')) return;
-        let list = getPetakList().filter(b => b.id !== id);
-        lsSet(LS.PETAK, list);
-        renderMandorTab();
-        showToast('Petak dihapus.', 'warning');
+    function initReportCascadingSelects() {
+        const bkphSel = document.getElementById('reportBKPH');
+        const rphSel = document.getElementById('reportRPH');
+        const tpgSel = document.getElementById('reportTPG');
+        const mandorSel = document.getElementById('reportMandor');
+        const penyadapSel = document.getElementById('reportPenyadap');
+        if (!bkphSel) return;
 
-        if (WEB_APP_URL && navigator.onLine) {
-            fetch(WEB_APP_URL, {
-                method: 'POST',
-                mode: 'no-cors',
-                body: JSON.stringify({ action: 'deletePetak', id: id })
-            }).then(() => {
-                showToast('Petak berhasil dihapus dari Google Sheets!', 'warning');
-                loadAllData(records => {
-                    renderMandorTab();
-                });
-            });
+        const bkphs = getBkphList().filter(x => x.status === 'Aktif');
+        bkphSel.innerHTML = '<option value="all">-- Semua BKPH --</option>' +
+            bkphs.map(b => `<option value="${b.id_bkph}">${b.nama_bkph}</option>`).join('');
+
+        bkphSel.addEventListener('change', function () {
+            const bkphId = this.value;
+            if (bkphId === 'all') {
+                rphSel.innerHTML = '<option value="all">-- Semua RPH --</option>';
+                tpgSel.innerHTML = '<option value="all">-- Semua TPG --</option>';
+                mandorSel.innerHTML = '<option value="all">-- Semua Mandor --</option>';
+                penyadapSel.innerHTML = '<option value="all">-- Semua Penyadap --</option>';
+                return;
+            }
+            const rphs = getRphList().filter(r => r.id_bkph === bkphId && r.status === 'Aktif');
+            rphSel.innerHTML = '<option value="all">-- Semua RPH --</option>' +
+                rphs.map(r => `<option value="${r.id_rph}">${r.nama_rph}</option>`).join('');
+            tpgSel.innerHTML = '<option value="all">-- Semua TPG --</option>';
+            mandorSel.innerHTML = '<option value="all">-- Semua Mandor --</option>';
+            penyadapSel.innerHTML = '<option value="all">-- Semua Penyadap --</option>';
+        });
+
+        rphSel.addEventListener('change', function () {
+            const rphId = this.value;
+            if (rphId === 'all') {
+                tpgSel.innerHTML = '<option value="all">-- Semua TPG --</option>';
+                mandorSel.innerHTML = '<option value="all">-- Semua Mandor --</option>';
+                penyadapSel.innerHTML = '<option value="all">-- Semua Penyadap --</option>';
+                return;
+            }
+            const tpgs = getTpgList().filter(t => t.id_rph === rphId && t.status === 'Aktif');
+            tpgSel.innerHTML = '<option value="all">-- Semua TPG --</option>' +
+                tpgs.map(t => `<option value="${t.id_tpg}">${t.nama_tpg}</option>`).join('');
+            mandorSel.innerHTML = '<option value="all">-- Semua Mandor --</option>';
+            penyadapSel.innerHTML = '<option value="all">-- Semua Penyadap --</option>';
+        });
+
+        tpgSel.addEventListener('change', function () {
+            const tpgId = this.value;
+            if (tpgId === 'all') {
+                mandorSel.innerHTML = '<option value="all">-- Semua Mandor --</option>';
+                penyadapSel.innerHTML = '<option value="all">-- Semua Penyadap --</option>';
+                return;
+            }
+            const mandors = getMandorList().filter(m => m.id_tpg === tpgId && m.status === 'Aktif');
+            mandorSel.innerHTML = '<option value="all">-- Semua Mandor --</option>' +
+                mandors.map(m => `<option value="${m.id_mandor}">${m.nama_mandor || m.nama}</option>`).join('');
+            penyadapSel.innerHTML = '<option value="all">-- Semua Penyadap --</option>';
+        });
+
+        mandorSel.addEventListener('change', function () {
+            const mandorId = this.value;
+            if (mandorId === 'all') {
+                penyadapSel.innerHTML = '<option value="all">-- Semua Penyadap --</option>';
+                return;
+            }
+            const penyadaps = getPenyadapList().filter(p => p.id_mandor === mandorId && p.status === 'Aktif');
+            penyadapSel.innerHTML = '<option value="all">-- Semua Penyadap --</option>' +
+                penyadaps.map(p => `<option value="${p.id_penyadap}">${p.nama_penyadap || p.nama}</option>`).join('');
+        });
+    }
+
+    function initTargetCascadingSelects(selectedBkph = '', selectedRph = '', selectedTpg = '') {
+        const bkphSel = document.getElementById('targetBKPHSelect');
+        const rphSel = document.getElementById('targetRPHSelect');
+        const tpgSel = document.getElementById('targetTPGSelect');
+        if (!bkphSel) return;
+
+        const bkphs = getBkphList().filter(x => x.status === 'Aktif');
+        bkphSel.innerHTML = bkphs.map(b => `<option value="${b.id_bkph}">${b.nama_bkph}</option>`).join('');
+        if (selectedBkph) bkphSel.value = selectedBkph;
+
+        const updateRph = (bkphId, currentRph = '') => {
+            const rphs = getRphList().filter(r => r.id_bkph === bkphId && r.status === 'Aktif');
+            rphSel.innerHTML = rphs.map(r => `<option value="${r.id_rph}">${r.nama_rph}</option>`).join('');
+            if (currentRph) rphSel.value = currentRph;
+            updateTpg(rphSel.value, selectedTpg);
+        };
+
+        const updateTpg = (rphId, currentTpg = '') => {
+            const tpgs = getTpgList().filter(t => t.id_rph === rphId && t.status === 'Aktif');
+            tpgSel.innerHTML = tpgs.map(t => `<option value="${t.id_tpg}">${t.nama_tpg}</option>`).join('');
+            if (currentTpg) tpgSel.value = currentTpg;
+        };
+
+        bkphSel.addEventListener('change', function () {
+            updateRph(this.value);
+        });
+
+        rphSel.addEventListener('change', function () {
+            updateTpg(this.value);
+        });
+
+        updateRph(bkphSel.value, selectedRph);
+    }
+
+    // ======================== TAB RENDERING ========================
+    function renderWilayahTab() {
+        const subtabs = document.querySelectorAll('#wilayahSubtabs .btn-subtab');
+        subtabs.forEach(btn => {
+            const sub = btn.getAttribute('data-subtab');
+            if (sub === activeWilayahSubtab) {
+                btn.className = 'btn btn-primary btn-subtab';
+                document.getElementById('subcontent-' + sub).style.display = 'block';
+            } else {
+                btn.className = 'btn btn-outline btn-subtab';
+                document.getElementById('subcontent-' + sub).style.display = 'none';
+            }
+        });
+
+        switch (activeWilayahSubtab) {
+            case 'bkph': renderBKPHList(); break;
+            case 'rph': renderRPHList(); break;
+            case 'tpg': renderTPGList(); break;
+            case 'petak': renderPetakListTable(); break;
         }
-    };
+    }
 
-    // Tambah Penyadap
-    document.getElementById('btnTambahPenyadap')?.addEventListener('click', () => {
-        document.getElementById('inputNamaPenyadap').value = '';
-        document.getElementById('inputPetakPenyadap').value = '';
-        document.getElementById('inputStatusPenyadap').value = 'Aktif';
-        populatePetakDropdowns();
-        openModal('modalTambahPenyadap');
+    // Bind subtab button clicks
+    document.querySelectorAll('#wilayahSubtabs .btn-subtab').forEach(btn => {
+        btn.addEventListener('click', function (e) {
+            e.preventDefault();
+            activeWilayahSubtab = this.getAttribute('data-subtab');
+            renderWilayahTab();
+        });
     });
 
-    document.getElementById('btnSimpanPenyadap')?.addEventListener('click', () => {
-        const nama   = document.getElementById('inputNamaPenyadap').value.trim();
-        const petak  = document.getElementById('inputPetakPenyadap').value;
-        const status = document.getElementById('inputStatusPenyadap').value;
-        if (!nama || !petak) { showToast('Isi nama dan petak terlebih dahulu.', 'error'); return; }
-        const list = getPenyadapList();
-        list.push({ id: 'p' + Date.now(), nama, petak, status });
-        lsSet(LS.PENYADAP, list);
-        closeModal('modalTambahPenyadap');
-        renderMandorTab();
-        showToast(`Penyadap "${nama}" berhasil ditambahkan!`, 'success');
+    // ======================== BKPH CRUD ========================
+    document.getElementById('btnTambahWilayahItem')?.addEventListener('click', () => {
+        if (activeWilayahSubtab === 'bkph') {
+            document.getElementById('editBKPHId').value = '';
+            document.getElementById('inputKodeBKPH').value = '';
+            document.getElementById('inputNamaBKPH').value = '';
+            document.getElementById('inputStatusBKPH').value = 'Aktif';
+            document.getElementById('modalBKPHTitle').textContent = 'Tambah BKPH';
+            openModal('modalBKPH');
+        } else if (activeWilayahSubtab === 'rph') {
+            document.getElementById('editRPHId').value = '';
+            document.getElementById('inputKodeRPH').value = '';
+            document.getElementById('inputNamaRPH').value = '';
+            populateBKPHIndukSelect('inputBKPHInduk');
+            document.getElementById('inputStatusRPH').value = 'Aktif';
+            document.getElementById('modalRPHTitle').textContent = 'Tambah RPH';
+            openModal('modalRPH');
+        } else if (activeWilayahSubtab === 'tpg') {
+            document.getElementById('editTPGId').value = '';
+            document.getElementById('inputKodeTPG').value = '';
+            document.getElementById('inputNamaTPG').value = '';
+            populateRPHIndukSelect('inputRPHInduk');
+            document.getElementById('inputStatusTPG').value = 'Aktif';
+            document.getElementById('modalTPGTitle').textContent = 'Tambah TPG';
+            openModal('modalTPG');
+        } else if (activeWilayahSubtab === 'petak') {
+            document.getElementById('editPetakId').value = '';
+            document.getElementById('inputKodePetak').value = '';
+            document.getElementById('inputAnakPetak').value = '';
+            document.getElementById('inputLuasPetak').value = '';
+            document.getElementById('inputPohonPetak').value = '';
+            populateTPGIndukSelect('inputTPGPetak');
+            document.getElementById('inputStatusPetak').value = 'Aktif';
+            document.getElementById('modalPetakTitle').textContent = 'Tambah Petak Baru';
+            openModal('modalPetak');
+        }
     });
 
-    // Tambah Petak
-    document.getElementById('btnTambahPetak')?.addEventListener('click', () => {
-        document.getElementById('editPetakId').value = '';
-        document.getElementById('inputKodePetak').value = '';
-        document.getElementById('inputLuasPetak').value = '';
-        document.getElementById('inputPohonPetak').value = '';
-        
-        // Reset target fields
-        document.getElementById('inputTargetTahunan').value = '';
-        
-        document.getElementById('modalPetakTitle').textContent = 'Tambah Petak Baru';
-        openModal('modalPetak');
-    });
+    document.getElementById('btnSimpanBKPH')?.addEventListener('click', () => {
+        const id = document.getElementById('editBKPHId').value;
+        const kode = document.getElementById('inputKodeBKPH').value.trim();
+        const nama = document.getElementById('inputNamaBKPH').value.trim();
+        const status = document.getElementById('inputStatusBKPH').value;
 
-    document.getElementById('btnSimpanPetak')?.addEventListener('click', () => {
-        const id = document.getElementById('editPetakId').value;
-        const kode = document.getElementById('inputKodePetak').value.trim();
-        const luas = parseFloat(document.getElementById('inputLuasPetak').value) || 0;
-        const pohon = parseInt(document.getElementById('inputPohonPetak').value) || 0;
-        
-        const targetTahunan = parseFloat(document.getElementById('inputTargetTahunan').value) || 0;
+        if (!kode || !nama) { showToast('Isi kode dan nama BKPH!', 'error'); return; }
 
-        if (!kode) { showToast('Masukkan kode petak.', 'error'); return; }
-        if (luas <= 0) { showToast('Luas petak harus bernilai positif.', 'error'); return; }
-        if (pohon <= 0) { showToast('Jumlah pohon harus bernilai positif.', 'error'); return; }
-
-        let list = getPetakList();
-        const exists = list.some(b => b.kode.toLowerCase() === kode.toLowerCase() && b.id !== id);
-        if (exists) { showToast('Kode petak sudah terdaftar.', 'error'); return; }
-
-        const petakId = id || 'b' + Date.now();
-        const petakData = { id: petakId, kode, luas, pohon };
+        let list = getBkphList();
+        const bkphId = id || 'b' + Date.now();
+        const bkphData = { id_bkph: bkphId, kode_bkph: kode, nama_bkph: nama, status };
 
         if (id) {
-            // Edit
-            const idx = list.findIndex(b => b.id === id);
-            if (idx >= 0) {
-                const oldKode = list[idx].kode;
-                list[idx] = petakData;
-
-                // Integrity: update tappers and targets
-                if (oldKode !== kode) {
-                    let tappers = getPenyadapList();
-                    tappers.forEach(t => { if (t.petak === oldKode) t.petak = kode; });
-                    lsSet(LS.PENYADAP, tappers);
-
-                    let targets = getTargetList();
-                    targets.forEach(t => { if (t.petak === oldKode) t.petak = kode; });
-                    lsSet(LS.TARGET, targets);
-                }
-                showToast(`Petak "${kode}" berhasil diubah!`);
-            }
+            const idx = list.findIndex(x => x.id_bkph === id);
+            if (idx >= 0) list[idx] = bkphData;
         } else {
-            // Add new
-            list.push(petakData);
-            showToast(`Petak "${kode}" berhasil ditambahkan!`);
+            list.push(bkphData);
         }
 
-        lsSet(LS.PETAK, list);
-        
-        // Save target details if targetTahunan is filled
-        if (targetTahunan > 0) {
-            let targets = getTargetList();
-            const tIdx = targets.findIndex(t => t.petak === kode && parseInt(t.tahun) === 2026);
-            const targetBulan1 = tIdx >= 0 ? (targets[tIdx].periode1 || 0) : 0;
-            const targetBulan2 = tIdx >= 0 ? (targets[tIdx].periode2 || 0) : 0;
-            const targetEntry = { petak: kode, tahun: 2026, tahunan: targetTahunan, periode1: targetBulan1, periode2: targetBulan2 };
-            if (tIdx >= 0) {
-                targets[tIdx] = targetEntry;
-            } else {
-                targets.push(targetEntry);
-            }
-            lsSet(LS.TARGET, targets);
-            
-            // Post Target to Sheets
-            if (WEB_APP_URL && navigator.onLine) {
-                fetch(WEB_APP_URL, {
-                    method: 'POST',
-                    mode: 'no-cors',
-                    body: JSON.stringify({ action: 'saveTarget', data: targetEntry })
-                });
-            }
-        }
-        
-        closeModal('modalPetak');
-        renderPetakTargetTable();
+        lsSet(LS.BKPH, list);
+        closeModal('modalBKPH');
+        renderBKPHList();
+        showToast('BKPH berhasil disimpan.');
 
-        if (WEB_APP_URL && navigator.onLine) {
-            fetch(WEB_APP_URL, {
-                method: 'POST',
-                mode: 'no-cors',
-                body: JSON.stringify({ action: 'savePetak', data: petakData })
-            }).then(() => {
-                showToast('Petak berhasil disinkronkan ke Google Sheets!');
-                loadAllData(records => {
-                    renderPetakTargetTable();
+        queueOfflineCrud({ action: 'saveBKPH', data: bkphData });
+        if (navigator.onLine) {
+            syncOfflineCrud(() => {
+                loadAllData(() => {
+                    renderBKPHList();
                 });
             });
         }
     });
 
-    window.editPetak = function(id) {
-        const list = getPetakList();
-        const b = list.find(x => x.id === id);
-        if (!b) return;
-
-        document.getElementById('editPetakId').value = b.id;
-        document.getElementById('inputKodePetak').value = b.kode;
-        document.getElementById('inputLuasPetak').value = b.luas;
-        document.getElementById('inputPohonPetak').value = b.pohon || 1000;
-        
-        // Fetch target for current year 2026
-        const targets = getTargetList();
-        const t = targets.find(x => x.petak === b.kode && parseInt(x.tahun) === 2026) || { tahunan: '' };
-        document.getElementById('inputTargetTahunan').value = t.tahunan;
-
-        document.getElementById('modalPetakTitle').textContent = 'Edit Data Petak';
-        openModal('modalPetak');
+    window.editBKPH = function (id) {
+        const list = getBkphList();
+        const x = list.find(item => item.id_bkph === id);
+        if (!x) return;
+        document.getElementById('editBKPHId').value = x.id_bkph;
+        document.getElementById('inputKodeBKPH').value = x.kode_bkph;
+        document.getElementById('inputNamaBKPH').value = x.nama_bkph;
+        document.getElementById('inputStatusBKPH').value = x.status;
+        document.getElementById('modalBKPHTitle').textContent = 'Edit BKPH';
+        openModal('modalBKPH');
     };
 
-    window.deletePetak = function(id) {
-        const list = getPetakList();
-        const b = list.find(x => x.id === id);
-        if (!b) return;
+    window.deleteBKPH = function (id) {
+        if (!confirm('Hapus BKPH ini? Semua relasi RPH akan terputus.')) return;
+        let list = getBkphList().filter(x => x.id_bkph !== id);
+        lsSet(LS.BKPH, list);
+        renderBKPHList();
+        showToast('BKPH berhasil dihapus.', 'warning');
 
-        if (confirm(`Apakah Anda yakin ingin menghapus petak "${b.kode}"?`)) {
-            const newList = list.filter(x => x.id !== id);
-            lsSet(LS.PETAK, newList);
-            renderPetakTargetTable();
-            showToast('Petak berhasil dihapus.', 'warning');
-
-            if (WEB_APP_URL && navigator.onLine) {
-                fetch(WEB_APP_URL, {
-                    method: 'POST',
-                    mode: 'no-cors',
-                    body: JSON.stringify({ action: 'deletePetak', id: id })
-                }).then(() => {
-                    showToast('Petak berhasil dihapus dari Google Sheets!', 'warning');
-                    loadAllData(records => {
-                        renderPetakTargetTable();
-                    });
+        queueOfflineCrud({ action: 'deleteBKPH', id: id });
+        if (navigator.onLine) {
+            syncOfflineCrud(() => {
+                loadAllData(() => {
+                    renderBKPHList();
                 });
-            }
+            });
         }
     };
 
-    function renderPetakTargetTable() {
-        const petakList = getPetakList();
-        const penyadapList = getPenyadapList();
-        const targets = getTargetList();
-        const tbody = document.getElementById('petakTargetTbody');
+    function renderBKPHList() {
+        const list = getBkphList();
+        const tbody = document.getElementById('bkphTbody');
         if (!tbody) return;
+        tbody.innerHTML = list.length ? list.map(x => `
+            <tr>
+                <td><code>${x.kode_bkph}</code></td>
+                <td><strong>${x.nama_bkph}</strong></td>
+                <td><span class="status-badge-${x.status.toLowerCase()}">${x.status}</span></td>
+                <td style="text-align: center;">
+                    <div class="action-btns" style="display:flex; gap:8px; justify-content: center;">
+                        <button class="btn btn-outline" style="padding: 6px 12px; font-size: 0.8rem;" onclick="window.editBKPH('${x.id_bkph}')">✏️ Edit</button>
+                        <button class="btn btn-outline" style="padding: 6px 12px; font-size: 0.8rem; border-color: var(--danger); color: var(--danger);" onclick="window.deleteBKPH('${x.id_bkph}')">🗑️ Hapus</button>
+                    </div>
+                </td>
+            </tr>
+        `).join('') : '<tr><td colspan="4" style="text-align:center;color:var(--text-muted);padding:20px;">Belum ada data BKPH</td></tr>';
+    }
 
-        if (!petakList.length) {
-            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:30px;">Belum ada data petak. Klik tombol Tambah Petak.</td></tr>';
-            return;
+    // ======================== RPH CRUD ========================
+    document.getElementById('btnSimpanRPH')?.addEventListener('click', () => {
+        const id = document.getElementById('editRPHId').value;
+        const kode = document.getElementById('inputKodeRPH').value.trim();
+        const nama = document.getElementById('inputNamaRPH').value.trim();
+        const id_bkph = document.getElementById('inputBKPHInduk').value;
+        const status = document.getElementById('inputStatusRPH').value;
+
+        if (!kode || !nama || !id_bkph) { showToast('Isi kode, nama, dan BKPH Induk!', 'error'); return; }
+
+        let list = getRphList();
+        const rphId = id || 'r' + Date.now();
+        const rphData = { id_rph: rphId, kode_rph: kode, nama_rph: nama, id_bkph, status };
+
+        if (id) {
+            const idx = list.findIndex(x => x.id_rph === id);
+            if (idx >= 0) list[idx] = rphData;
+        } else {
+            list.push(rphData);
         }
 
-        const thisYear = new Date().getFullYear();
+        lsSet(LS.RPH, list);
+        closeModal('modalRPH');
+        renderRPHList();
+        showToast('RPH berhasil disimpan.');
 
-        tbody.innerHTML = petakList.map(b => {
-            const assigned = penyadapList.filter(p => p.petak === b.kode && (p.status || 'Aktif') === 'Aktif');
-            
-            // Calculate trees digarap vs total
-            const treesDigarap = assigned.reduce((sum, p) => sum + (parseInt(p.pohon) || 0), 0);
-            const treesNganggur = Math.max(0, (b.pohon || 1000) - treesDigarap);
+        queueOfflineCrud({ action: 'saveRPH', data: rphData });
+        if (navigator.onLine) {
+            syncOfflineCrud(() => {
+                loadAllData(() => {
+                    renderRPHList();
+                });
+            });
+        }
+    });
 
-            const t = targets.find(x => x.petak === b.kode && parseInt(x.tahun) === thisYear) || { tahunan: 3600 };
+    window.editRPH = function (id) {
+        const list = getRphList();
+        const x = list.find(item => item.id_rph === id);
+        if (!x) return;
+        document.getElementById('editRPHId').value = x.id_rph;
+        document.getElementById('inputKodeRPH').value = x.kode_rph;
+        document.getElementById('inputNamaRPH').value = x.nama_rph;
+        populateBKPHIndukSelect('inputBKPHInduk', x.id_bkph);
+        document.getElementById('inputStatusRPH').value = x.status;
+        document.getElementById('modalRPHTitle').textContent = 'Edit RPH';
+        openModal('modalRPH');
+    };
 
-            const namesList = assigned.map(p => `${p.nama} (${p.pohon || 0} ph)`).join(', ') || '-';
+    window.deleteRPH = function (id) {
+        if (!confirm('Hapus RPH ini? Semua relasi TPG akan terputus.')) return;
+        let list = getRphList().filter(x => x.id_rph !== id);
+        lsSet(LS.RPH, list);
+        renderRPHList();
+        showToast('RPH berhasil dihapus.', 'warning');
 
+        queueOfflineCrud({ action: 'deleteRPH', id: id });
+        if (navigator.onLine) {
+            syncOfflineCrud(() => {
+                loadAllData(() => {
+                    renderRPHList();
+                });
+            });
+        }
+    };
+
+    function renderRPHList() {
+        const list = getRphList();
+        const bkphs = getBkphList();
+        const tbody = document.getElementById('rphTbody');
+        if (!tbody) return;
+        tbody.innerHTML = list.length ? list.map(x => {
+            const bkph = bkphs.find(b => b.id_bkph === x.id_bkph) || { nama_bkph: '-' };
             return `
                 <tr>
-                    <td><strong>${b.kode}</strong></td>
-                    <td>${b.luas} Ha</td>
-                    <td><strong>${b.pohon || 1000}</strong></td>
-                    <td>
-                        <span style="font-weight:600; color:var(--primary-light);">${treesDigarap}</span>
-                        <div style="font-size:0.75rem; color:var(--text-muted); margin-top:2px;">(${namesList})</div>
-                    </td>
-                    <td><strong style="color:${treesNganggur > 0 ? 'var(--warning)' : 'var(--text-muted)'}">${treesNganggur} pohon</strong></td>
-                    <td><strong>${t.tahunan.toLocaleString('id-ID')} kg</strong></td>
+                    <td><code>${x.kode_rph}</code></td>
+                    <td><strong>${x.nama_rph}</strong></td>
+                    <td>${bkph.nama_bkph}</td>
+                    <td><span class="status-badge-${x.status.toLowerCase()}">${x.status}</span></td>
                     <td style="text-align: center;">
                         <div class="action-btns" style="display:flex; gap:8px; justify-content: center;">
-                            <button class="btn btn-outline" style="padding: 6px 12px; font-size: 0.8rem;" onclick="window.editPetak('${b.id}')">✏️ Edit</button>
-                            <button class="btn btn-outline" style="padding: 6px 12px; font-size: 0.8rem; border-color: var(--danger); color: var(--danger);" onclick="window.deletePetak('${b.id}')">🗑️ Hapus</button>
+                            <button class="btn btn-outline" style="padding: 6px 12px; font-size: 0.8rem;" onclick="window.editRPH('${x.id_rph}')">✏️ Edit</button>
+                            <button class="btn btn-outline" style="padding: 6px 12px; font-size: 0.8rem; border-color: var(--danger); color: var(--danger);" onclick="window.deleteRPH('${x.id_rph}')">🗑️ Hapus</button>
                         </div>
                     </td>
                 </tr>
             `;
-        }).join('');
+        }).join('') : '<tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:20px;">Belum ada data RPH</td></tr>';
     }
 
-    // Expose aturTarget to global
-    window.aturTarget = function(petakKode) {
+    // ======================== TPG CRUD ========================
+    document.getElementById('btnSimpanTPG')?.addEventListener('click', () => {
+        const id = document.getElementById('editTPGId').value;
+        const kode = document.getElementById('inputKodeTPG').value.trim();
+        const nama = document.getElementById('inputNamaTPG').value.trim();
+        const id_rph = document.getElementById('inputRPHInduk').value;
+        const status = document.getElementById('inputStatusTPG').value;
+
+        if (!kode || !nama || !id_rph) { showToast('Isi kode, nama, and RPH Induk!', 'error'); return; }
+
+        let list = getTpgList();
+        const tpgId = id || 't' + Date.now();
+        const tpgData = { id_tpg: tpgId, kode_tpg: kode, nama_tpg: nama, id_rph, status };
+
+        if (id) {
+            const idx = list.findIndex(x => x.id_tpg === id);
+            if (idx >= 0) list[idx] = tpgData;
+        } else {
+            list.push(tpgData);
+        }
+
+        lsSet(LS.TPG, list);
+        closeModal('modalTPG');
+        renderTPGList();
+        showToast('TPG berhasil disimpan.');
+
+        queueOfflineCrud({ action: 'saveTPG', data: tpgData });
+        if (navigator.onLine) {
+            syncOfflineCrud(() => {
+                loadAllData(() => {
+                    renderTPGList();
+                });
+            });
+        }
+    });
+
+    window.editTPG = function (id) {
+        const list = getTpgList();
+        const x = list.find(item => item.id_tpg === id);
+        if (!x) return;
+        document.getElementById('editTPGId').value = x.id_tpg;
+        document.getElementById('inputKodeTPG').value = x.kode_tpg;
+        document.getElementById('inputNamaTPG').value = x.nama_tpg;
+        populateRPHIndukSelect('inputRPHInduk', x.id_rph);
+        document.getElementById('inputStatusTPG').value = x.status;
+        document.getElementById('modalTPGTitle').textContent = 'Edit TPG';
+        openModal('modalTPG');
+    };
+
+    window.deleteTPG = function (id) {
+        if (!confirm('Hapus TPG ini? Semua relasi Petak akan terputus.')) return;
+        let list = getTpgList().filter(x => x.id_tpg !== id);
+        lsSet(LS.TPG, list);
+        renderTPGList();
+        showToast('TPG berhasil dihapus.', 'warning');
+
+        queueOfflineCrud({ action: 'deleteTPG', id: id });
+        if (navigator.onLine) {
+            syncOfflineCrud(() => {
+                loadAllData(() => {
+                    renderTPGList();
+                });
+            });
+        }
+    };
+
+    function renderTPGList() {
+        const list = getTpgList();
+        const rphs = getRphList();
+        const tbody = document.getElementById('tpgTbody');
+        if (!tbody) return;
+        tbody.innerHTML = list.length ? list.map(x => {
+            const rph = rphs.find(r => r.id_rph === x.id_rph) || { nama_rph: '-' };
+            return `
+                <tr>
+                    <td><code>${x.kode_tpg}</code></td>
+                    <td><strong>${x.nama_tpg}</strong></td>
+                    <td>${rph.nama_rph}</td>
+                    <td><span class="status-badge-${x.status.toLowerCase()}">${x.status}</span></td>
+                    <td style="text-align: center;">
+                        <div class="action-btns" style="display:flex; gap:8px; justify-content: center;">
+                            <button class="btn btn-outline" style="padding: 6px 12px; font-size: 0.8rem;" onclick="window.editTPG('${x.id_tpg}')">✏️ Edit</button>
+                            <button class="btn btn-outline" style="padding: 6px 12px; font-size: 0.8rem; border-color: var(--danger); color: var(--danger);" onclick="window.deleteTPG('${x.id_tpg}')">🗑️ Hapus</button>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        }).join('') : '<tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:20px;">Belum ada data TPG</td></tr>';
+    }
+
+    // ======================== PETAK CRUD ========================
+    document.getElementById('btnSimpanPetak')?.addEventListener('click', () => {
+        const id = document.getElementById('editPetakId').value;
+        const kode = document.getElementById('inputKodePetak').value.trim();
+        const anak_petak = document.getElementById('inputAnakPetak').value.trim();
+        const luas = parseFloat(document.getElementById('inputLuasPetak').value) || 0;
+        const pohon = parseInt(document.getElementById('inputPohonPetak').value) || 0;
+        const id_tpg = document.getElementById('inputTPGPetak').value;
+        const status = document.getElementById('inputStatusPetak').value;
+
+        if (!kode || luas <= 0 || pohon <= 0 || !id_tpg) { showToast('Isi kode, luas, pohon, dan TPG Induk!', 'error'); return; }
+
+        let list = getPetakList();
+        const petakId = id || 'b' + Date.now();
+        const petakData = { id_petak: petakId, nomor_petak: kode, anak_petak, luas, id_tpg, pohon, status, id: petakId, kode };
+
+        if (id) {
+            const idx = list.findIndex(x => x.id_petak === id || x.id === id);
+            if (idx >= 0) list[idx] = petakData;
+        } else {
+            list.push(petakData);
+        }
+
+        lsSet(LS.PETAK, list);
+        closeModal('modalPetak');
+        renderPetakListTable();
+        showToast('Petak berhasil disimpan.');
+
+        queueOfflineCrud({ action: 'savePetak', data: petakData });
+        if (navigator.onLine) {
+            syncOfflineCrud(() => {
+                loadAllData(() => {
+                    renderPetakListTable();
+                });
+            });
+        }
+    });
+
+    window.editPetak = function (id) {
+        const list = getPetakList();
+        const x = list.find(item => item.id_petak === id || item.id === id);
+        if (!x) return;
+        document.getElementById('editPetakId').value = x.id_petak || x.id;
+        document.getElementById('inputKodePetak').value = x.nomor_petak || x.kode;
+        document.getElementById('inputAnakPetak').value = x.anak_petak || '';
+        document.getElementById('inputLuasPetak').value = x.luas;
+        document.getElementById('inputPohonPetak').value = x.pohon || 1000;
+        populateTPGIndukSelect('inputTPGPetak', x.id_tpg);
+        document.getElementById('inputStatusPetak').value = x.status || 'Aktif';
+        document.getElementById('modalPetakTitle').textContent = 'Edit Petak';
+        openModal('modalPetak');
+    };
+
+    window.deletePetak = function (id) {
+        if (!confirm('Hapus petak ini? Semua relasi penyadap akan terputus.')) return;
+        let list = getPetakList().filter(x => x.id_petak !== id && x.id !== id);
+        lsSet(LS.PETAK, list);
+        renderPetakListTable();
+        showToast('Petak berhasil dihapus.', 'warning');
+
+        queueOfflineCrud({ action: 'deletePetak', id: id });
+        if (navigator.onLine) {
+            syncOfflineCrud(() => {
+                loadAllData(() => {
+                    renderPetakListTable();
+                });
+            });
+        }
+    };
+
+    function renderPetakListTable() {
+        const list = getPetakList();
+        const tpgs = getTpgList();
+        const tbody = document.getElementById('petakTargetTbody');
+        if (!tbody) return;
+        tbody.innerHTML = list.length ? list.map(x => {
+            const tpg = tpgs.find(t => t.id_tpg === x.id_tpg) || { nama_tpg: '-' };
+            const targets = getTargetList();
+            const target = targets.find(t => t.petak === x.nomor_petak && parseInt(t.tahun) === 2026) || { tahunan: 0 };
+            return `
+                <tr>
+                    <td><code>${x.nomor_petak}${x.anak_petak ? ' - ' + x.anak_petak : ''}</code></td>
+                    <td>${tpg.nama_tpg}</td>
+                    <td>${x.luas} Ha</td>
+                    <td>${x.pohon || 1000}</td>
+                    <td><span class="status-badge-${(x.status || 'Aktif').toLowerCase()}">${x.status || 'Aktif'}</span></td>
+                    <td><strong>${target.tahunan.toLocaleString('id-ID')} kg/th</strong></td>
+                    <td style="text-align: center;">
+                        <div class="action-btns" style="display:flex; gap:8px; justify-content: center;">
+                            <button class="btn btn-outline" style="padding: 6px 12px; font-size: 0.8rem;" onclick="window.editPetak('${x.id_petak || x.id}')">✏️ Edit</button>
+                            <button class="btn btn-outline" style="padding: 6px 12px; font-size: 0.8rem;" onclick="window.aturTarget('${x.nomor_petak || x.kode}')">🎯 Target</button>
+                            <button class="btn btn-outline" style="padding: 6px 12px; font-size: 0.8rem; border-color: var(--danger); color: var(--danger);" onclick="window.deletePetak('${x.id_petak || x.id}')">🗑️ Hapus</button>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        }).join('') : '<tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:20px;">Belum ada data Petak</td></tr>';
+    }
+
+    // ======================== PENYADAP CRUD ========================
+    document.getElementById('btnTambahPenyadap')?.addEventListener('click', () => {
+        document.getElementById('editPenyadapId').value = '';
+        document.getElementById('inputNamaPenyadap').value = '';
+        populateMandorSelect('inputMandorPenyadap');
+        populatePetakSelect('inputPetakPenyadap');
+        document.getElementById('inputPohonPenyadap').value = '';
+        document.getElementById('inputLuasPenyadap').value = '';
+        document.getElementById('inputStatusPenyadap').value = 'Aktif';
+        document.getElementById('modalPenyadapTitle').textContent = 'Tambah Penyadap';
+        openModal('modalPenyadap');
+    });
+
+    document.getElementById('btnSimpanPenyadap')?.addEventListener('click', () => {
+        const id = document.getElementById('editPenyadapId').value;
+        const nama = document.getElementById('inputNamaPenyadap').value.trim();
+        const id_mandor = document.getElementById('inputMandorPenyadap').value;
+        const id_petak = document.getElementById('inputPetakPenyadap').value;
+        const pohon = parseInt(document.getElementById('inputPohonPenyadap').value) || 0;
+        const luas = parseFloat(document.getElementById('inputLuasPenyadap').value) || 0;
+        const status = document.getElementById('inputStatusPenyadap').value;
+
+        if (!nama || !id_mandor || !id_petak || pohon <= 0) { showToast('Isi nama, mandor, petak, dan pohon garapan!', 'error'); return; }
+
+        const petaks = getPetakList();
+        const selPetak = petaks.find(p => p.id_petak === id_petak) || { nomor_petak: '' };
+
+        let list = getPenyadapList();
+        const penyadapId = id || 'p' + Date.now();
+        const penyadapData = {
+            id_penyadap: penyadapId,
+            nama_penyadap: nama,
+            id_mandor,
+            id_petak,
+            status,
+            pohon,
+            luas,
+            target: 3600,
+            periode1: 150,
+            periode2: 150,
+            id: penyadapId,
+            nama,
+            petak: selPetak.nomor_petak
+        };
+
+        if (id) {
+            const idx = list.findIndex(x => x.id_penyadap === id || x.id === id);
+            if (idx >= 0) list[idx] = penyadapData;
+        } else {
+            list.push(penyadapData);
+        }
+
+        lsSet(LS.PENYADAP, list);
+        closeModal('modalPenyadap');
+        renderPenyadapTable();
+        showToast('Penyadap berhasil disimpan.');
+
+        queueOfflineCrud({ action: 'savePenyadap', data: penyadapData });
+        if (navigator.onLine) {
+            syncOfflineCrud(() => {
+                loadAllData(() => {
+                    renderPenyadapTable();
+                });
+            });
+        }
+    });
+
+    window.editPenyadap = function (id) {
+        const list = getPenyadapList();
+        const x = list.find(item => item.id_penyadap === id || item.id === id);
+        if (!x) return;
+        document.getElementById('editPenyadapId').value = x.id_penyadap || x.id;
+        document.getElementById('inputNamaPenyadap').value = x.nama_penyadap || x.nama;
+        populateMandorSelect('inputMandorPenyadap', x.id_mandor);
+        populatePetakSelect('inputPetakPenyadap', x.id_petak);
+        document.getElementById('inputPohonPenyadap').value = x.pohon || 800;
+        document.getElementById('inputLuasPenyadap').value = x.luas || 2.5;
+        document.getElementById('inputStatusPenyadap').value = x.status || 'Aktif';
+        document.getElementById('modalPenyadapTitle').textContent = 'Edit Penyadap';
+        openModal('modalPenyadap');
+    };
+
+    window.deletePenyadap = function (id) {
+        if (!confirm('Hapus penyadap ini?')) return;
+        let list = getPenyadapList().filter(x => x.id_penyadap !== id && x.id !== id);
+        lsSet(LS.PENYADAP, list);
+        renderPenyadapTable();
+        showToast('Penyadap berhasil dihapus.', 'warning');
+
+        queueOfflineCrud({ action: 'deletePenyadap', id: id });
+        if (navigator.onLine) {
+            syncOfflineCrud(() => {
+                loadAllData(() => {
+                    renderPenyadapTable();
+                });
+            });
+        }
+    };
+
+    function renderPenyadapTable() {
+        const list = getPenyadapList();
+        const mandors = getMandorList();
+        const petaks = getPetakList();
+        const tbody = document.getElementById('penyadapTbody');
+        if (!tbody) return;
+        tbody.innerHTML = list.length ? list.map(x => {
+            const mandor = mandors.find(m => m.id_mandor === x.id_mandor || m.id === x.id_mandor) || { nama_mandor: '-' };
+            const petak = petaks.find(p => p.id_petak === x.id_petak || p.kode === x.petak) || { nomor_petak: x.petak || '-' };
+            return `
+                <tr>
+                    <td><strong>${x.nama_penyadap || x.nama}</strong></td>
+                    <td><code>${petak.nomor_petak}</code></td>
+                    <td>${mandor.nama_mandor || mandor.nama}</td>
+                    <td>
+                        🌳 ${x.pohon || 0} ph | 📐 ${x.luas || 0} Ha
+                        <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 4px;">Target: <strong>${(x.target || 0).toLocaleString('id')} kg/th</strong> | P1: ${x.periode1 || 0} kg | P2: ${x.periode2 || 0} kg</div>
+                    </td>
+                    <td><span class="status-badge-${(x.status || 'Aktif').toLowerCase()}">${x.status || 'Aktif'}</span></td>
+                    <td style="text-align: center;">
+                        <div class="action-btns" style="display:flex; gap:8px; justify-content: center;">
+                            <button class="btn btn-outline" style="padding: 6px 12px; font-size: 0.8rem;" onclick="window.editPenyadap('${x.id_penyadap || x.id}')">✏️ Edit</button>
+                            <button class="btn btn-outline" style="padding: 6px 12px; font-size: 0.8rem; border-color: var(--danger); color: var(--danger);" onclick="window.deletePenyadap('${x.id_penyadap || x.id}')">🗑️ Hapus</button>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        }).join('') : '<tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:20px;">Belum ada data penyadap</td></tr>';
+    }
+
+    // ======================== USER CRUD ========================
+    document.getElementById('btnTambahUser')?.addEventListener('click', () => {
+        document.getElementById('editUserId').value = '';
+        document.getElementById('inputNamaUser').value = '';
+        document.getElementById('inputUsernameUser').value = '';
+        document.getElementById('inputPasswordUser').value = '';
+        document.getElementById('inputRoleUser').value = 'KRPH / ASPER';
+        document.getElementById('inputWilayahAksesUser').value = '';
+        document.getElementById('inputStatusUser').value = 'Aktif';
+        document.getElementById('modalUserTitle').textContent = 'Tambah User Baru';
+        openModal('modalUser');
+    });
+
+    document.getElementById('btnSimpanUser')?.addEventListener('click', () => {
+        const id = document.getElementById('editUserId').value;
+        const nama = document.getElementById('inputNamaUser').value.trim();
+        const username = document.getElementById('inputUsernameUser').value.trim();
+        const password = document.getElementById('inputPasswordUser').value.trim();
+        const role = document.getElementById('inputRoleUser').value;
+        const wilayah_akses = document.getElementById('inputWilayahAksesUser').value.trim();
+        const status = document.getElementById('inputStatusUser').value;
+
+        if (!nama || !username || (!id && !password)) { showToast('Isi nama, username, and password!', 'error'); return; }
+
+        let list = getUserList();
+        const userId = id || 'u' + Date.now();
+
+        let oldUser = list.find(x => x.id_user === id);
+        let finalPassword = password || (oldUser ? oldUser.password : '123456');
+
+        const userData = { id_user: userId, nama, username, password: finalPassword, role, wilayah_akses, status };
+
+        if (id) {
+            const idx = list.findIndex(x => x.id_user === id);
+            if (idx >= 0) list[idx] = userData;
+        } else {
+            list.push(userData);
+        }
+
+        lsSet(LS.USER, list);
+        closeModal('modalUser');
+        renderUserTable();
+        showToast('User berhasil disimpan.');
+
+        queueOfflineCrud({ action: 'saveUser', data: userData });
+        if (navigator.onLine) {
+            syncOfflineCrud(() => {
+                loadAllData(() => {
+                    renderUserTable();
+                });
+            });
+        }
+    });
+
+    window.editUser = function (id) {
+        const list = getUserList();
+        const x = list.find(item => item.id_user === id);
+        if (!x) return;
+        document.getElementById('editUserId').value = x.id_user;
+        document.getElementById('inputNamaUser').value = x.nama;
+        document.getElementById('inputUsernameUser').value = x.username;
+        document.getElementById('inputPasswordUser').value = ''; // leave blank if unchanged
+        document.getElementById('inputRoleUser').value = x.role;
+        document.getElementById('inputWilayahAksesUser').value = x.wilayah_akses;
+        document.getElementById('inputStatusUser').value = x.status;
+        document.getElementById('modalUserTitle').textContent = 'Edit User';
+        openModal('modalUser');
+    };
+
+    window.deleteUser = function (id) {
+        if (!confirm('Hapus user ini?')) return;
+        let list = getUserList().filter(x => x.id_user !== id);
+        lsSet(LS.USER, list);
+        renderUserTable();
+        showToast('User berhasil dihapus.', 'warning');
+
+        queueOfflineCrud({ action: 'deleteUser', id: id });
+        if (navigator.onLine) {
+            syncOfflineCrud(() => {
+                loadAllData(() => {
+                    renderUserTable();
+                });
+            });
+        }
+    };
+
+    function renderUserTable() {
+        const list = getUserList();
+        const tbody = document.getElementById('userTbody');
+        if (!tbody) return;
+        tbody.innerHTML = list.length ? list.map(x => `
+            <tr>
+                <td><strong>${x.nama}</strong></td>
+                <td><code>${x.username}</code></td>
+                <td><span style="font-weight: 700; color: var(--primary);">${x.role}</span></td>
+                <td>${x.wilayah_akses}</td>
+                <td><span class="status-badge-${x.status.toLowerCase()}">${x.status}</span></td>
+                <td style="text-align: center;">
+                    <div class="action-btns" style="display:flex; gap:8px; justify-content: center;">
+                        <button class="btn btn-outline" style="padding: 6px 12px; font-size: 0.8rem;" onclick="window.editUser('${x.id_user}')">✏️ Edit</button>
+                        <button class="btn btn-outline" style="padding: 6px 12px; font-size: 0.8rem; border-color: var(--danger); color: var(--danger);" onclick="window.deleteUser('${x.id_user}')">🗑️ Hapus</button>
+                    </div>
+                </td>
+            </tr>
+        `).join('') : '<tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:20px;">Belum ada data user</td></tr>';
+    }
+
+    // ======================== TARGET SETTING ========================
+    window.aturTarget = function (petakKode) {
         const targets = getTargetList();
+        const bkphs = getBkphList();
+        const rphs = getRphList();
+        const tpgs = getTpgList();
+        const petaks = getPetakList();
+
+        const petak = petaks.find(p => p.nomor_petak === petakKode || p.kode === petakKode) || { id_tpg: 't1' };
+        const tpg = tpgs.find(t => t.id_tpg === petak.id_tpg) || { id_rph: 'r1' };
+        const rph = rphs.find(r => r.id_rph === tpg.id_rph) || { id_bkph: 'b1' };
+
         const thisYear = new Date().getFullYear();
         const target = targets.find(t => t.petak === petakKode && parseInt(t.tahun) === thisYear) || {
+            id_target: '',
+            petak: petakKode,
             tahun: thisYear,
             tahunan: 3600,
             periode1: 150,
-            periode2: 150
+            periode2: 150,
+            id_bkph: rph.id_bkph,
+            id_rph: tpg.id_rph,
+            id_tpg: petak.id_tpg,
+            target_ro: 3600,
+            target_rkap: 0,
+            target_rtt: 0
         };
 
-        const activeWorkers = getActivePenyadap().filter(p => p.petak === petakKode);
         document.getElementById('targetPetakKode').value = petakKode;
-        document.getElementById('modalTargetPenyadapNames').textContent = activeWorkers.length > 0
-            ? activeWorkers.map(w => w.nama).join(', ')
-            : 'Belum ada penyadap aktif ditugaskan pada petak ini.';
-
+        document.getElementById('editTargetId').value = target.id_target;
         document.getElementById('targetTahun').value = target.tahun;
         document.getElementById('targetTahunanTotal').value = target.tahunan;
-        document.getElementById('targetBulan1').value = target.periode1;
-        document.getElementById('targetBulan2').value = target.periode2;
+        document.getElementById('targetRO').value = target.target_ro || target.tahunan;
+        document.getElementById('targetRKAP').value = target.target_rkap || 0;
+        document.getElementById('targetRTT').value = target.target_rtt || 0;
+
+        initTargetCascadingSelects(target.id_bkph, target.id_rph, target.id_tpg);
 
         document.getElementById('modalTargetTitle').textContent = `Set Target Petak: ${petakKode}`;
         openModal('modalTarget');
-        calcAndShowTargetPerPenyadap();
     };
 
-    // Setting Target
-    const targetPetakSel = document.getElementById('targetPetakSelect');
-    if (targetPetakSel) {
-        targetPetakSel.addEventListener('change', updateTargetInfo);
-    }
-
-    function calcAndShowTargetPerPenyadap() {
-        const petak    = document.getElementById('targetPetakSelect')?.value;
-        const tahunan  = parseFloat(document.getElementById('targetTahunanTotal')?.value) || 0;
-        const p1 = parseFloat(document.getElementById('targetBulan1')?.value) || 0;
-        const p2 = parseFloat(document.getElementById('targetBulan2')?.value) || 0;
-        if (!petak) return;
-
-        const assigned = getActivePenyadap().filter(p => p.petak === petak);
-        const n = assigned.length || 1;
-
-        const elTahunan = document.getElementById('targetPerPenyadapTahunan');
-        const elNilai   = document.getElementById('nilaiTargetPerPenyadap');
-        const elBulanan = document.getElementById('targetBulananPerPenyadap');
-        const elNilaiBul = document.getElementById('nilaiTargetBulananPenyadap');
-
-        if (tahunan > 0 && elTahunan && elNilai) {
-            elTahunan.style.display = 'flex';
-            elNilai.textContent = `${(tahunan / n).toFixed(0)} kg/tahun (${n} penyadap)`;
-        }
-        if ((p1 > 0 || p2 > 0) && elBulanan && elNilaiBul) {
-            elBulanan.style.display = 'flex';
-            elNilaiBul.textContent = `Periode 1: ${(p1 / n).toFixed(0)} kg | Periode 2: ${(p2 / n).toFixed(0)} kg`;
-        }
-    }
-
-    ['targetTahunanTotal', 'targetBulan1', 'targetBulan2'].forEach(id => {
-        document.getElementById(id)?.addEventListener('input', calcAndShowTargetPerPenyadap);
-    });
-
-    function updateTargetInfo() {
-        const petak = document.getElementById('targetPetakSelect')?.value;
-        const infoBox = document.getElementById('targetPenyadapInfo');
-        const namesEl = document.getElementById('targetPenyadapNames');
-        if (!petak || !infoBox || !namesEl) return;
-
-        const assigned = getActivePenyadap().filter(p => p.petak === petak);
-        infoBox.style.display = assigned.length ? 'block' : 'none';
-        namesEl.textContent   = assigned.length ? assigned.map(p => p.nama).join(', ') : '-';
-        calcAndShowTargetPerPenyadap();
-    }
-
     document.getElementById('btnSimpanTarget')?.addEventListener('click', () => {
-        const petak   = document.getElementById('targetPetakSelect')?.value || document.getElementById('targetPetakKode')?.value;
-        const tahun   = document.getElementById('targetTahun')?.value;
-        const tahunan = document.getElementById('targetTahunanTotal')?.value;
-        const p1      = document.getElementById('targetBulan1')?.value;
-        const p2      = document.getElementById('targetBulan2')?.value;
+        const petak = document.getElementById('targetPetakKode').value;
+        const id = document.getElementById('editTargetId').value;
+        const bkph = document.getElementById('targetBKPHSelect').value;
+        const rph = document.getElementById('targetRPHSelect').value;
+        const tpg = document.getElementById('targetTPGSelect').value;
+        const tahun = document.getElementById('targetTahun').value;
+        const bulan = document.getElementById('targetBulan').value;
+        const periode = document.getElementById('targetPeriode').value;
+        const tahunan = parseFloat(document.getElementById('targetTahunanTotal').value) || 0;
+        const target_ro = parseFloat(document.getElementById('targetRO').value) || 0;
+        const target_rkap = parseFloat(document.getElementById('targetRKAP').value) || 0;
+        const target_rtt = parseFloat(document.getElementById('targetRTT').value) || 0;
 
-        if (!petak || !tahunan) { showToast('Pilih petak dan isi target tahunan.', 'error'); return; }
+        if (!tpg || tahunan <= 0) { showToast('Isi target tahunan dan TPG Induk!', 'error'); return; }
 
         let targets = getTargetList();
-        const idx   = targets.findIndex(t => t.petak === petak && t.tahun === tahun);
-        const entry = { petak, tahun, tahunan: parseFloat(tahunan), periode1: parseFloat(p1) || 0, periode2: parseFloat(p2) || 0 };
+        const targetId = id || 't-' + petak + '-' + tahun;
+        const entry = {
+            id_target: targetId,
+            petak,
+            tahun,
+            bulan,
+            periode,
+            tahunan,
+            periode1: Math.round(tahunan / 24), // target periode default
+            periode2: Math.round(tahunan / 24),
+            id_bkph: bkph,
+            id_rph: rph,
+            id_tpg: tpg,
+            target_ro,
+            target_rkap,
+            target_rtt,
+            status: 'Aktif'
+        };
 
+        const idx = targets.findIndex(t => t.id_target === targetId || (t.petak === petak && t.tahun === tahun));
         if (idx >= 0) targets[idx] = entry;
         else targets.push(entry);
-        lsSet(LS.TARGET, targets);
-        renderTargetTable();
-        showToast(`Target petak ${petak} tahun ${tahun} disimpan!`, 'success');
 
-        if (WEB_APP_URL && navigator.onLine) {
-            fetch(WEB_APP_URL, {
-                method: 'POST',
-                mode: 'no-cors',
-                body: JSON.stringify({ action: 'saveTarget', data: entry })
-            }).then(() => {
-                showToast('Target berhasil disinkronkan ke Google Sheets!');
-                loadAllData(records => {
-                    renderTargetTable();
+        lsSet(LS.TARGET, targets);
+        closeModal('modalTarget');
+        renderWilayahTab();
+        showToast('Target berhasil disimpan.');
+
+        queueOfflineCrud({ action: 'saveTarget', data: entry });
+        if (navigator.onLine) {
+            syncOfflineCrud(() => {
+                loadAllData(() => {
+                    renderWilayahTab();
                 });
             });
         }
@@ -1487,7 +2123,7 @@ document.addEventListener('DOMContentLoaded', function () {
     function renderMonitoringTab() {
         const dateEl = document.getElementById('monitoringDate');
         if (dateEl && !dateEl.value) dateEl.value = todayStr();
-        
+
         const btnSimpanMon = document.getElementById('btnSimpanMonitoring');
         if (btnSimpanMon) btnSimpanMon.style.display = 'none';
 
@@ -1510,10 +2146,10 @@ document.addEventListener('DOMContentLoaded', function () {
         const container = document.getElementById('monitoringPetakContainer');
         if (!container) return;
 
-        const petakList    = getPetakList();
+        const petakList = getPetakList();
         const penyadapList = getActivePenyadap();
-        const mon          = getMonitoringData();
-        const dayData      = mon[tgl] || {};
+        const mon = getMonitoringData();
+        const dayData = mon[tgl] || {};
 
         if (!petakList.length) {
             container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text-muted);">Belum ada petak terdaftar. Silakan tambah petak di menu Kelola Mandor.</div>';
@@ -1537,24 +2173,24 @@ document.addEventListener('DOMContentLoaded', function () {
                 <div class="monitoring-penyadap-list">`;
 
             assigned.forEach(p => {
-                const saved  = dayData[p.nama] || {};
+                const saved = dayData[p.nama] || {};
                 const status = saved.status || 'Hadir';
-                const ket    = saved.keterangan || '';
+                const ket = saved.keterangan || '';
 
                 const radios = statusOptions.map(s => {
                     const checked = status === s ? 'checked' : '';
-                    const safeId  = `mon_${tgl}_${p.nama.replace(/\s+/g, '_')}_${s.replace(/\s+/g, '_')}`;
-                    return `<input type="radio" class="mon-status-radio" name="mon_${tgl}_${p.nama.replace(/\s+/g,'_')}" value="${s}" id="${safeId}" ${checked} disabled style="margin-right: 4px;">
+                    const safeId = `mon_${tgl}_${p.nama.replace(/\s+/g, '_')}_${s.replace(/\s+/g, '_')}`;
+                    return `<input type="radio" class="mon-status-radio" name="mon_${tgl}_${p.nama.replace(/\s+/g, '_')}" value="${s}" id="${safeId}" ${checked} disabled style="margin-right: 4px;">
                             <label class="mon-status-label" for="${safeId}" style="margin-right: 12px; font-size: 0.85rem; font-weight: 500;">${s}</label>`;
                 }).join('');
 
                 const showKet = (status !== 'Hadir') ? 'visible' : '';
                 const rowClass = status === 'Hadir' ? 'hadir' : status === 'Sakit' ? 'sakit' : 'tidak-hadir';
 
-                html += `<div class="monitoring-penyadap-row ${rowClass}" id="monrow_${tgl}_${p.nama.replace(/\s+/g,'_')}">
+                html += `<div class="monitoring-penyadap-row ${rowClass}" id="monrow_${tgl}_${p.nama.replace(/\s+/g, '_')}">
                     <div class="mon-penyadap-name">👤 ${p.nama}</div>
                     <div class="mon-status-select-group">${radios}</div>
-                    <input type="text" class="mon-keterangan-input ${showKet}" id="monket_${tgl}_${p.nama.replace(/\s+/g,'_')}" placeholder="Keterangan..." value="${ket}" disabled style="font-size: 0.85rem; padding: 6px 12px; width: 100%;">
+                    <input type="text" class="mon-keterangan-input ${showKet}" id="monket_${tgl}_${p.nama.replace(/\s+/g, '_')}" placeholder="Keterangan..." value="${ket}" disabled style="font-size: 0.85rem; padding: 6px 12px; width: 100%;">
                 </div>`;
             });
 
@@ -1565,7 +2201,7 @@ document.addEventListener('DOMContentLoaded', function () {
         updateMonitoringCounts();
     }
 
-    window.onMonStatusChange = function(tgl, nama, status) {
+    window.onMonStatusChange = function (tgl, nama, status) {
         const mon = getMonitoringData();
         if (!mon[tgl]) mon[tgl] = {};
         if (!mon[tgl][nama]) mon[tgl][nama] = {};
@@ -1573,8 +2209,8 @@ document.addEventListener('DOMContentLoaded', function () {
         lsSet(LS.MONITORING, mon);
 
         const safeNama = nama.replace(/\s+/g, '_');
-        const row    = document.getElementById(`monrow_${tgl}_${safeNama}`);
-        const ketEl  = document.getElementById(`monket_${tgl}_${safeNama}`);
+        const row = document.getElementById(`monrow_${tgl}_${safeNama}`);
+        const ketEl = document.getElementById(`monket_${tgl}_${safeNama}`);
         if (row) {
             row.className = `monitoring-penyadap-row ${status === 'Hadir' ? 'hadir' : status === 'Sakit' ? 'sakit' : 'tidak-hadir'}`;
         }
@@ -1584,7 +2220,7 @@ document.addEventListener('DOMContentLoaded', function () {
         updateMonitoringCounts();
     };
 
-    window.onMonKetChange = function(tgl, nama, ket) {
+    window.onMonKetChange = function (tgl, nama, ket) {
         const mon = getMonitoringData();
         if (!mon[tgl]) mon[tgl] = {};
         if (!mon[tgl][nama]) mon[tgl][nama] = {};
@@ -1614,10 +2250,10 @@ document.addEventListener('DOMContentLoaded', function () {
         });
 
         const setEl = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
-        setEl('monHadirCount',     hadir);
+        setEl('monHadirCount', hadir);
         setEl('monTidakHadirCount', tidakHadir);
-        setEl('monSakitCount',      sakit);
-        setEl('monLainnyaCount',    lainnya);
+        setEl('monSakitCount', sakit);
+        setEl('monLainnyaCount', lainnya);
     }
 
     // ======================== 7. MAP VISUALIZER ========================
@@ -1641,7 +2277,7 @@ document.addEventListener('DOMContentLoaded', function () {
             el.style.display = 'block';
             const b = petak.kode;
             el.setAttribute('data-block-id', b);
-            
+
             // Update text inside SVG
             const textEl = document.querySelector(`.map-text:nth-of-type(${index + 1})`);
             if (textEl) {
@@ -1651,33 +2287,33 @@ document.addEventListener('DOMContentLoaded', function () {
             }
 
             const br = records.filter(r => r.petak && (r.petak === b || r.petak.startsWith(b + ' ') || r.petak.startsWith(b + '-')));
-            
+
             const avg = br.length > 0 ? br.reduce((s, r) => s + r.estimasi_hasil, 0) / br.length : 0;
             const latest = br[0] || { tanggal: '-', nama_penyadap: 'Belum ada', kondisi_lapangan: 'Normal', kendala: 'Tidak ada' };
             const cond = latest.kondisi_lapangan;
             let status = 'hijau', statusText = 'Produksi Baik';
-            
+
             if (br.length === 0) {
                 status = ''; // Tetap hitam jika tidak ada data sama sekali
                 statusText = 'Belum Ada Data';
-            } else if (avg < 5 || cond === 'Pohon Rusak' || cond === 'Wadah Rusak') { 
-                status = 'merah'; statusText = 'Perlu Pengecekan'; 
-            } else if (avg <= 15 || cond === 'Hujan') { 
-                status = 'kuning'; statusText = 'Produksi Menurun'; 
+            } else if (avg < 5 || cond === 'Pohon Rusak' || cond === 'Wadah Rusak') {
+                status = 'merah'; statusText = 'Perlu Pengecekan';
+            } else if (avg <= 15 || cond === 'Hujan') {
+                status = 'kuning'; statusText = 'Produksi Menurun';
             }
-            
-            mapDataCache.push({ 
-                petak: b, 
-                avg_produksi: +avg.toFixed(1), 
-                terakhir_update: latest.tanggal, 
-                penyadap_terakhir: latest.nama_penyadap, 
-                kondisi_terakhir: latest.kondisi_lapangan, 
-                kendala_terakhir: latest.kendala || 'Tidak ada', 
-                status, 
-                status_text: statusText 
+
+            mapDataCache.push({
+                petak: b,
+                avg_produksi: +avg.toFixed(1),
+                terakhir_update: latest.tanggal,
+                penyadap_terakhir: latest.nama_penyadap,
+                kondisi_terakhir: latest.kondisi_lapangan,
+                kendala_terakhir: latest.kendala || 'Tidak ada',
+                status,
+                status_text: statusText
             });
 
-            el.classList.remove('hijau', 'kuning', 'merah'); 
+            el.classList.remove('hijau', 'kuning', 'merah');
             if (status) el.classList.add(status);
         });
 
@@ -1696,55 +2332,507 @@ document.addEventListener('DOMContentLoaded', function () {
     function showBlockDetails(blockId) {
         const info = mapDataCache.find(d => d.petak === blockId);
         if (!info) return;
-        document.getElementById('detailEmptyState').style.display  = 'none';
+        document.getElementById('detailEmptyState').style.display = 'none';
         document.getElementById('detailActiveState').style.display = 'block';
         document.getElementById('det-petak-name').textContent = info.petak;
         const badge = document.getElementById('det-status-badge');
         badge.textContent = info.status_text;
-        badge.className   = 'badge-status ' + info.status;
-        document.getElementById('det-avg-prod').textContent    = `${info.avg_produksi} kg`;
+        badge.className = 'badge-status ' + info.status;
+        document.getElementById('det-avg-prod').textContent = `${info.avg_produksi} kg`;
         document.getElementById('det-last-worker').textContent = info.penyadap_terakhir;
-        document.getElementById('det-last-cond').textContent   = info.kondisi_terakhir;
-        document.getElementById('det-last-issue').textContent  = info.kendala_terakhir;
+        document.getElementById('det-last-cond').textContent = info.kondisi_terakhir;
+        document.getElementById('det-last-issue').textContent = info.kendala_terakhir;
         document.getElementById('det-last-update').textContent = formatDateDMY(info.terakhir_update);
     }
 
     // ======================== 8. TABEL LAPORAN ========================
-    function renderReportTable(records) {
-        const search    = document.getElementById('filter-search')?.value.toLowerCase().trim() || '';
-        const petak     = document.getElementById('filter-petak')?.value || '';
-        const startDate = document.getElementById('filter-start-date')?.value || '';
-        const endDate   = document.getElementById('filter-end-date')?.value || '';
+    function getTransactionDetails(r) {
+        const penyadaps = getPenyadapList();
+        const petaks = getPetakList();
+        const tpgs = getTpgList();
+        const rphs = getRphList();
+        const bkphs = getBkphList();
+        const mandors = getMandorList();
 
-        let filtered = [...records];
-        if (search)    filtered = filtered.filter(r => r.nama_penyadap.toLowerCase().includes(search) || (r.kendala || '').toLowerCase().includes(search));
-        if (petak)     filtered = filtered.filter(r => r.petak === petak);
-        if (startDate) filtered = filtered.filter(r => r.tanggal >= startDate);
-        if (endDate)   filtered = filtered.filter(r => r.tanggal <= endDate);
+        const penyadap = penyadaps.find(p => p.nama === r.nama_penyadap || p.nama_penyadap === r.nama_penyadap);
+        const petakKode = r.petak || (penyadap ? penyadap.petak : '');
+        const petak = petaks.find(p => p.nomor_petak === petakKode || p.kode === petakKode);
 
-        const tbody = document.querySelector('#reportsTable tbody');
-        if (!tbody) return;
-        tbody.innerHTML = '';
-
-        if (!filtered.length) {
-            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:30px;">Tidak ditemukan data yang cocok dengan filter.</td></tr>';
-            return;
+        let tpgId = petak ? petak.id_tpg : '';
+        if (!tpgId && penyadap) {
+            const mandor = mandors.find(m => m.id_mandor === penyadap.id_mandor || m.id === penyadap.id_mandor);
+            if (mandor) tpgId = mandor.id_tpg;
         }
-        filtered.forEach(item => {
-            const tr = document.createElement('tr');
-            let condBadge = `<span style="font-weight:700;color:#2d6a4f;">${item.kondisi_lapangan}</span>`;
-            if (item.kondisi_lapangan === 'Hujan') condBadge = `<span style="font-weight:700;color:#f4a261;">${item.kondisi_lapangan}</span>`;
-            else if (item.kondisi_lapangan === 'Pohon Rusak' || item.kondisi_lapangan === 'Wadah Rusak') condBadge = `<span style="font-weight:700;color:#e63946;">${item.kondisi_lapangan}</span>`;
-            tr.innerHTML = `
-                <td><strong>${formatDateDMY(item.tanggal)}</strong></td>
-                <td>${item.nama_penyadap}</td>
-                <td><code style="background:#edf2f7;padding:4px 8px;border-radius:4px;font-weight:600;">${item.petak}</code></td>
-                <td><strong>${item.estimasi_hasil} kg</strong></td>
-                <td>${condBadge}</td>
-                <td>${item.kendala ? `<span style="color:#d90429;font-weight:600;">${item.kendala}</span>` : '<span style="color:#718096;font-style:italic;">Tidak ada</span>'}</td>`;
-            tbody.appendChild(tr);
+        const tpg = tpgs.find(t => t.id_tpg === tpgId);
+        const rphId = tpg ? tpg.id_rph : '';
+        const rph = rphs.find(r => r.id_rph === rphId);
+        const bkphId = rph ? rph.id_bkph : '';
+        const bkph = bkphs.find(b => b.id_bkph === bkphId);
+        const mandorId = penyadap ? penyadap.id_mandor : '';
+        const mandor = mandors.find(m => m.id_mandor === mandorId || m.id === mandorId);
+
+        return {
+            penyadap,
+            petak,
+            tpg,
+            rph,
+            bkph,
+            mandor,
+            id_bkph: bkphId,
+            id_rph: rphId,
+            id_tpg: tpgId,
+            id_mandor: mandorId,
+            id_penyadap: penyadap ? (penyadap.id_penyadap || penyadap.id) : ''
+        };
+    }
+
+    function filterRecordsForReport(records) {
+        const type = document.getElementById('reportType')?.value || 'harian';
+        const bkphId = document.getElementById('reportBKPH')?.value || 'all';
+        const rphId = document.getElementById('reportRPH')?.value || 'all';
+        const tpgId = document.getElementById('reportTPG')?.value || 'all';
+        const mandorId = document.getElementById('reportMandor')?.value || 'all';
+        const penyadapId = document.getElementById('reportPenyadap')?.value || 'all';
+        const tahun = document.getElementById('reportTahun')?.value || 'all';
+        const bulan = document.getElementById('reportBulan')?.value || 'all';
+        const periode = document.getElementById('reportPeriode')?.value || 'all';
+
+        return records.filter(r => {
+            const details = getTransactionDetails(r);
+
+            // Regional Filters
+            if (bkphId !== 'all' && details.id_bkph !== bkphId) return false;
+            if (rphId !== 'all' && details.id_rph !== rphId) return false;
+            if (tpgId !== 'all' && details.id_tpg !== tpgId) return false;
+            if (mandorId !== 'all' && details.id_mandor !== mandorId) return false;
+            if (penyadapId !== 'all' && details.id_penyadap !== penyadapId) return false;
+
+            // Date Filters
+            const d = new Date(r.tanggal);
+            if (isNaN(d.getTime())) return false;
+
+            if (tahun !== 'all' && d.getFullYear().toString() !== tahun) return false;
+            if (bulan !== 'all' && (d.getMonth() + 1).toString() !== bulan) return false;
+
+            if (periode !== 'all') {
+                const day = d.getDate();
+                const recordPeriod = day <= 15 ? '1' : '2';
+                if (recordPeriod !== periode) return false;
+            }
+
+            return true;
         });
-        tbody.dataset.filteredJson = JSON.stringify(filtered);
+    }
+
+    function renderReportTable(records) {
+        const reportType = document.getElementById('reportType')?.value || 'harian';
+        const tbody = document.querySelector('#reportsTable tbody');
+        const thead = document.querySelector('#reportsTable thead');
+
+        if (!tbody || !thead) return;
+
+        const filtered = filterRecordsForReport(records);
+        tbody.innerHTML = '';
+        thead.innerHTML = '';
+        tbody.dataset.reportType = reportType;
+
+        if (reportType === 'harian') {
+            thead.innerHTML = `
+                <tr>
+                    <th>Tanggal</th>
+                    <th>Nama Penyadap</th>
+                    <th>BKPH</th>
+                    <th>RPH</th>
+                    <th>TPG</th>
+                    <th>Petak</th>
+                    <th>Hasil (kg)</th>
+                    <th>Kondisi</th>
+                    <th>Kendala</th>
+                </tr>
+            `;
+
+            if (!filtered.length) {
+                tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--text-muted);padding:30px;">Tidak ditemukan data laporan harian yang cocok.</td></tr>';
+                tbody.dataset.filteredJson = JSON.stringify([]);
+                return;
+            }
+
+            filtered.forEach(item => {
+                const details = getTransactionDetails(item);
+                const tr = document.createElement('tr');
+                let condBadge = `<span style="font-weight:700;color:#2d6a4f;">${item.kondisi_lapangan}</span>`;
+                if (item.kondisi_lapangan === 'Hujan') condBadge = `<span style="font-weight:700;color:#f4a261;">${item.kondisi_lapangan}</span>`;
+                else if (item.kondisi_lapangan === 'Pohon Rusak' || item.kondisi_lapangan === 'Wadah Rusak') condBadge = `<span style="font-weight:700;color:#e63946;">${item.kondisi_lapangan}</span>`;
+
+                tr.innerHTML = `
+                    <td><strong>${formatDateDMY(item.tanggal)}</strong></td>
+                    <td>${item.nama_penyadap}</td>
+                    <td>${details.bkph ? details.bkph.nama_bkph : '-'}</td>
+                    <td>${details.rph ? details.rph.nama_rph : '-'}</td>
+                    <td>${details.tpg ? details.tpg.nama_tpg : '-'}</td>
+                    <td><code style="background:#edf2f7;padding:4px 8px;border-radius:4px;font-weight:600;">${item.petak}</code></td>
+                    <td><strong>${item.estimasi_hasil.toFixed(1)} kg</strong></td>
+                    <td>${condBadge}</td>
+                    <td>${item.kendala ? `<span style="color:#d90429;font-weight:600;">${item.kendala}</span>` : '<span style="color:#718096;font-style:italic;">Tidak ada</span>'}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            tbody.dataset.filteredJson = JSON.stringify(filtered.map(item => {
+                const d = getTransactionDetails(item);
+                return {
+                    Tanggal: formatDateDMY(item.tanggal),
+                    Penyadap: item.nama_penyadap,
+                    BKPH: d.bkph ? d.bkph.nama_bkph : '-',
+                    RPH: d.rph ? d.rph.nama_rph : '-',
+                    TPG: d.tpg ? d.tpg.nama_tpg : '-',
+                    Petak: item.petak,
+                    Hasil_kg: item.estimasi_hasil,
+                    Kondisi: item.kondisi_lapangan,
+                    Kendala: item.kendala || '-'
+                };
+            }));
+
+        } else if (reportType === 'periode') {
+            thead.innerHTML = `
+                <tr>
+                    <th>BKPH</th>
+                    <th>RPH</th>
+                    <th>TPG</th>
+                    <th>Nama Penyadap</th>
+                    <th>Tahun</th>
+                    <th>Bulan</th>
+                    <th>Periode</th>
+                    <th>Total Realisasi (kg)</th>
+                </tr>
+            `;
+
+            const agg = {};
+            filtered.forEach(item => {
+                const details = getTransactionDetails(item);
+                const d = new Date(item.tanggal);
+                const yr = d.getFullYear();
+                const mo = d.getMonth() + 1;
+                const pe = d.getDate() <= 15 ? 1 : 2;
+
+                const key = `${details.id_bkph || 'b-all'}_${details.id_rph || 'r-all'}_${details.id_tpg || 't-all'}_${item.nama_penyadap}_${yr}_${mo}_${pe}`;
+                if (!agg[key]) {
+                    agg[key] = {
+                        bkph: details.bkph ? details.bkph.nama_bkph : '-',
+                        rph: details.rph ? details.rph.nama_rph : '-',
+                        tpg: details.tpg ? details.tpg.nama_tpg : '-',
+                        penyadap: item.nama_penyadap,
+                        tahun: yr,
+                        bulan: mo,
+                        periode: pe,
+                        total: 0
+                    };
+                }
+                agg[key].total += item.estimasi_hasil;
+            });
+
+            const rows = Object.values(agg);
+
+            if (!rows.length) {
+                tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--text-muted);padding:30px;">Tidak ditemukan data rekap periode yang cocok.</td></tr>';
+                tbody.dataset.filteredJson = JSON.stringify([]);
+                return;
+            }
+
+            rows.forEach(item => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${item.bkph}</td>
+                    <td>${item.rph}</td>
+                    <td>${item.tpg}</td>
+                    <td><strong>${item.penyadap}</strong></td>
+                    <td>${item.tahun}</td>
+                    <td>Bulan ${item.bulan}</td>
+                    <td>Periode ${item.periode}</td>
+                    <td><strong>${item.total.toFixed(1)} kg</strong></td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            tbody.dataset.filteredJson = JSON.stringify(rows.map(item => ({
+                BKPH: item.bkph,
+                RPH: item.rph,
+                TPG: item.tpg,
+                Penyadap: item.penyadap,
+                Tahun: item.tahun,
+                Bulan: 'Bulan ' + item.bulan,
+                Periode: 'Periode ' + item.periode,
+                Total_Realisasi_kg: item.total
+            })));
+
+        } else if (reportType === 'bulanan') {
+            thead.innerHTML = `
+                <tr>
+                    <th>BKPH</th>
+                    <th>RPH</th>
+                    <th>TPG</th>
+                    <th>Nama Penyadap</th>
+                    <th>Tahun</th>
+                    <th>Bulan</th>
+                    <th>Total Realisasi (kg)</th>
+                </tr>
+            `;
+
+            const agg = {};
+            filtered.forEach(item => {
+                const details = getTransactionDetails(item);
+                const d = new Date(item.tanggal);
+                const yr = d.getFullYear();
+                const mo = d.getMonth() + 1;
+
+                const key = `${details.id_bkph || 'b-all'}_${details.id_rph || 'r-all'}_${details.id_tpg || 't-all'}_${item.nama_penyadap}_${yr}_${mo}`;
+                if (!agg[key]) {
+                    agg[key] = {
+                        bkph: details.bkph ? details.bkph.nama_bkph : '-',
+                        rph: details.rph ? details.rph.nama_rph : '-',
+                        tpg: details.tpg ? details.tpg.nama_tpg : '-',
+                        penyadap: item.nama_penyadap,
+                        tahun: yr,
+                        bulan: mo,
+                        total: 0
+                    };
+                }
+                agg[key].total += item.estimasi_hasil;
+            });
+
+            const rows = Object.values(agg);
+
+            if (!rows.length) {
+                tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:30px;">Tidak ditemukan data rekap bulanan yang cocok.</td></tr>';
+                tbody.dataset.filteredJson = JSON.stringify([]);
+                return;
+            }
+
+            rows.forEach(item => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${item.bkph}</td>
+                    <td>${item.rph}</td>
+                    <td>${item.tpg}</td>
+                    <td><strong>${item.penyadap}</strong></td>
+                    <td>${item.tahun}</td>
+                    <td>Bulan ${item.bulan}</td>
+                    <td><strong>${item.total.toFixed(1)} kg</strong></td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            tbody.dataset.filteredJson = JSON.stringify(rows.map(item => ({
+                BKPH: item.bkph,
+                RPH: item.rph,
+                TPG: item.tpg,
+                Penyadap: item.penyadap,
+                Tahun: item.tahun,
+                Bulan: 'Bulan ' + item.bulan,
+                Total_Realisasi_kg: item.total
+            })));
+
+        } else if (reportType === 'tahunan') {
+            thead.innerHTML = `
+                <tr>
+                    <th>BKPH</th>
+                    <th>RPH</th>
+                    <th>TPG</th>
+                    <th>Nama Penyadap</th>
+                    <th>Tahun</th>
+                    <th>Total Realisasi (kg)</th>
+                </tr>
+            `;
+
+            const agg = {};
+            filtered.forEach(item => {
+                const details = getTransactionDetails(item);
+                const d = new Date(item.tanggal);
+                const yr = d.getFullYear();
+
+                const key = `${details.id_bkph || 'b-all'}_${details.id_rph || 'r-all'}_${details.id_tpg || 't-all'}_${item.nama_penyadap}_${yr}`;
+                if (!agg[key]) {
+                    agg[key] = {
+                        bkph: details.bkph ? details.bkph.nama_bkph : '-',
+                        rph: details.rph ? details.rph.nama_rph : '-',
+                        tpg: details.tpg ? details.tpg.nama_tpg : '-',
+                        penyadap: item.nama_penyadap,
+                        tahun: yr,
+                        total: 0
+                    };
+                }
+                agg[key].total += item.estimasi_hasil;
+            });
+
+            const rows = Object.values(agg);
+
+            if (!rows.length) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:30px;">Tidak ditemukan data rekap tahunan yang cocok.</td></tr>';
+                tbody.dataset.filteredJson = JSON.stringify([]);
+                return;
+            }
+
+            rows.forEach(item => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${item.bkph}</td>
+                    <td>${item.rph}</td>
+                    <td>${item.tpg}</td>
+                    <td><strong>${item.penyadap}</strong></td>
+                    <td>${item.tahun}</td>
+                    <td><strong>${item.total.toFixed(1)} kg</strong></td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            tbody.dataset.filteredJson = JSON.stringify(rows.map(item => ({
+                BKPH: item.bkph,
+                RPH: item.rph,
+                TPG: item.tpg,
+                Penyadap: item.penyadap,
+                Tahun: item.tahun,
+                Total_Realisasi_kg: item.total
+            })));
+
+        } else if (reportType === 'target_vs_realisasi') {
+            thead.innerHTML = `
+                <tr>
+                    <th>BKPH</th>
+                    <th>RPH</th>
+                    <th>TPG</th>
+                    <th>Tahun</th>
+                    <th>Bulan</th>
+                    <th>Periode</th>
+                    <th>Target (kg)</th>
+                    <th>Realisasi (kg)</th>
+                    <th>Selisih (kg)</th>
+                    <th>Capaian</th>
+                </tr>
+            `;
+
+            const targets = getTargetList();
+            const tpgs = getTpgList();
+            const rphs = getRphList();
+            const bkphs = getBkphList();
+
+            const agg = {};
+
+            targets.forEach(t => {
+                const bkph = bkphs.find(b => b.id_bkph === t.id_bkph) || { nama_bkph: '-' };
+                const rph = rphs.find(r => r.id_rph === t.id_rph) || { nama_rph: '-' };
+                const tpg = tpgs.find(g => g.id_tpg === t.id_tpg) || { nama_tpg: '-' };
+
+                const key = `${t.id_tpg}_${t.tahun}_${t.bulan || 1}_${t.periode || 1}`;
+                agg[key] = {
+                    id_tpg: t.id_tpg,
+                    bkph: bkph.nama_bkph,
+                    rph: rph.nama_rph,
+                    tpg: tpg.nama_tpg,
+                    tahun: parseInt(t.tahun),
+                    bulan: parseInt(t.bulan || 1),
+                    periode: parseInt(t.periode || 1),
+                    target: parseFloat(t.target_ro || t.tahunan || 0),
+                    realisasi: 0
+                };
+            });
+
+            filtered.forEach(item => {
+                const details = getTransactionDetails(item);
+                const d = new Date(item.tanggal);
+                const yr = d.getFullYear();
+                const mo = d.getMonth() + 1;
+                const pe = d.getDate() <= 15 ? 1 : 2;
+
+                const key = `${details.id_tpg}_${yr}_${mo}_${pe}`;
+                if (agg[key]) {
+                    agg[key].realisasi += item.estimasi_hasil;
+                } else if (details.id_tpg) {
+                    agg[key] = {
+                        id_tpg: details.id_tpg,
+                        bkph: details.bkph ? details.bkph.nama_bkph : '-',
+                        rph: details.rph ? details.rph.nama_rph : '-',
+                        tpg: details.tpg ? details.tpg.nama_tpg : '-',
+                        tahun: yr,
+                        bulan: mo,
+                        periode: pe,
+                        target: 0,
+                        realisasi: item.estimasi_hasil
+                    };
+                }
+            });
+
+            const rows = Object.values(agg).filter(r => {
+                const fTahun = document.getElementById('reportTahun')?.value || 'all';
+                const fBulan = document.getElementById('reportBulan')?.value || 'all';
+                const fPeriode = document.getElementById('reportPeriode')?.value || 'all';
+                const fBkph = document.getElementById('reportBKPH')?.value || 'all';
+                const fRph = document.getElementById('reportRPH')?.value || 'all';
+                const fTpg = document.getElementById('reportTPG')?.value || 'all';
+
+                if (fTahun !== 'all' && r.tahun.toString() !== fTahun) return false;
+                if (fBulan !== 'all' && r.bulan.toString() !== fBulan) return false;
+                if (fPeriode !== 'all' && r.periode.toString() !== fPeriode) return false;
+
+                if (fBkph !== 'all') {
+                    const matchedTpg = getTpgList().find(t => t.id_tpg === r.id_tpg);
+                    const matchedRph = matchedTpg ? getRphList().find(h => h.id_rph === matchedTpg.id_rph) : null;
+                    if (!matchedRph || matchedRph.id_bkph !== fBkph) return false;
+                }
+                if (fRph !== 'all') {
+                    const matchedTpg = getTpgList().find(t => t.id_tpg === r.id_tpg);
+                    if (!matchedTpg || matchedTpg.id_rph !== fRph) return false;
+                }
+                if (fTpg !== 'all' && r.id_tpg !== fTpg) return false;
+
+                return true;
+            });
+
+            if (!rows.length) {
+                tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;color:var(--text-muted);padding:30px;">Tidak ditemukan data target vs realisasi yang cocok.</td></tr>';
+                tbody.dataset.filteredJson = JSON.stringify([]);
+                return;
+            }
+
+            rows.forEach(item => {
+                const diff = item.realisasi - item.target;
+                const pct = item.target > 0 ? (item.realisasi / item.target * 100) : 0;
+
+                let pctBadge = '';
+                if (pct >= 90) pctBadge = `<span class="badge-status hijau" style="display:inline;">${pct.toFixed(1)}%</span>`;
+                else if (pct >= 60) pctBadge = `<span class="badge-status kuning" style="display:inline;">${pct.toFixed(1)}%</span>`;
+                else pctBadge = `<span class="badge-status merah" style="display:inline;">${pct.toFixed(1)}%</span>`;
+
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${item.bkph}</td>
+                    <td>${item.rph}</td>
+                    <td><strong>${item.tpg}</strong></td>
+                    <td>${item.tahun}</td>
+                    <td>Bulan ${item.bulan}</td>
+                    <td>P${item.periode}</td>
+                    <td><strong>${item.target.toLocaleString('id-ID')} kg</strong></td>
+                    <td><strong>${item.realisasi.toLocaleString('id-ID')} kg</strong></td>
+                    <td style="color: ${diff >= 0 ? 'green' : 'red'}; font-weight: 700;">
+                        ${diff >= 0 ? '+' : ''}${diff.toLocaleString('id-ID')} kg
+                    </td>
+                    <td>${pctBadge}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            tbody.dataset.filteredJson = JSON.stringify(rows.map(item => ({
+                BKPH: item.bkph,
+                RPH: item.rph,
+                TPG: item.tpg,
+                Tahun: item.tahun,
+                Bulan: 'Bulan ' + item.bulan,
+                Periode: 'Periode ' + item.periode,
+                Target_kg: item.target,
+                Realisasi_kg: item.realisasi,
+                Selisih_kg: item.realisasi - item.target,
+                Capaian_Persen: (item.target > 0 ? (item.realisasi / item.target * 100).toFixed(2) : '0.00') + '%'
+            })));
+        }
     }
 
     document.getElementById('btnFilterApply')?.addEventListener('click', () => renderReportTable(globalRecords));
@@ -1752,17 +2840,694 @@ document.addEventListener('DOMContentLoaded', function () {
     // ======================== 9. EXPORT & PRINT ========================
     document.getElementById('btnExportCSV')?.addEventListener('click', () => {
         const tbody = document.querySelector('#reportsTable tbody');
-        const data  = JSON.parse(tbody?.dataset.filteredJson || '[]');
+        const reportType = tbody?.dataset.reportType || 'harian';
+        const data = JSON.parse(tbody?.dataset.filteredJson || '[]');
         if (!data.length) { showToast('Tidak ada data untuk diekspor.', 'warning'); return; }
-        let csv = 'data:text/csv;charset=utf-8,ID,Tanggal,Nama Penyadap,Petak/Blok,Estimasi Hasil (kg),Kondisi Lapangan,Kendala\n';
-        data.forEach(r => {
-            csv += [r.id, r.tanggal, `"${(r.nama_penyadap||'').replace(/"/g,'""')}"`, `"${(r.petak||'').replace(/"/g,'""')}"`, r.estimasi_hasil, `"${(r.kondisi_lapangan||'').replace(/"/g,'""')}"`, `"${(r.kendala||'').replace(/"/g,'""')}"`].join(',') + '\n';
-        });
-        const a = document.createElement('a');
-        a.href = encodeURI(csv);
-        a.download = `laporan_sipena_${todayStr()}.csv`;
-        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+
+        try {
+            const wb = XLSX.utils.book_new();
+            const ws = XLSX.utils.json_to_sheet(data);
+            XLSX.utils.book_append_sheet(wb, ws, "Laporan " + reportType.toUpperCase());
+            XLSX.writeFile(wb, `laporan_${reportType}_${todayStr()}.xlsx`);
+            showToast('Laporan Excel berhasil diunduh!');
+        } catch (err) {
+            showToast('Gagal ekspor Excel: ' + err.message, 'error');
+        }
     });
+
+    // ======================== AUTHENTICATION & ROLE ACCESS ========================
+    function checkAuth() {
+        const user = lsGet(LS.AUTH_USER);
+        const loginOverlay = document.getElementById('loginOverlay');
+        if (!user) {
+            if (loginOverlay) loginOverlay.style.display = 'flex';
+            tabContents.forEach(tc => tc.classList.remove('active'));
+            if (sidebar) sidebar.style.display = 'none';
+            return null;
+        } else {
+            if (loginOverlay) loginOverlay.style.display = 'none';
+            if (sidebar) sidebar.style.display = 'flex';
+            applyRoleAccess(user);
+            return user;
+        }
+    }
+
+    function applyRoleAccess(user) {
+        const role = user.role;
+        const profileName = document.querySelector('.user-profile span:first-child');
+        const profileRole = document.querySelector('.user-profile span:last-child');
+        const avatar = document.querySelector('.user-profile .avatar');
+        if (profileName) profileName.textContent = user.nama;
+        if (profileRole) profileRole.textContent = user.role + (user.wilayah_akses && user.wilayah_akses !== 'ALL' ? ` (${user.wilayah_akses})` : '');
+        if (avatar) avatar.textContent = user.nama ? user.nama.substring(0, 3).toUpperCase() : 'USR';
+
+        menuItems.forEach(item => {
+            const tab = item.getAttribute('data-tab');
+            if (!tab) return;
+
+            if (role === 'Admin BKPH') {
+                item.style.display = 'block';
+            } else if (role === 'KRPH / ASPER') {
+                if (['wilayah', 'mandor', 'penyadap', 'user', 'import-excel'].includes(tab)) {
+                    item.style.display = 'none';
+                } else {
+                    item.style.display = 'block';
+                }
+            } else if (role === 'Pimpinan') {
+                if (['wilayah', 'mandor', 'penyadap', 'user', 'import-excel', 'monitoring'].includes(tab)) {
+                    item.style.display = 'none';
+                } else {
+                    item.style.display = 'block';
+                }
+            }
+        });
+
+        const activeItem = document.querySelector('.sidebar-menu li.active');
+        if (activeItem) {
+            const activeTab = activeItem.getAttribute('data-tab');
+            const targetMenuItem = document.querySelector(`.sidebar-menu li[data-tab="${activeTab}"]`);
+            if (targetMenuItem && targetMenuItem.style.display === 'none') {
+                menuItems.forEach(li => li.classList.remove('active'));
+                const dbItem = document.querySelector('.sidebar-menu li[data-tab="dashboard"]');
+                if (dbItem) dbItem.classList.add('active');
+                tabContents.forEach(tc => tc.classList.remove('active'));
+                document.getElementById('tab-dashboard')?.classList.add('active');
+                updatePageHeader('dashboard');
+                renderTabView('dashboard');
+            }
+        }
+    }
+
+    function handleLoginSubmit() {
+        const usernameEl = document.getElementById('loginUsername');
+        const passwordEl = document.getElementById('loginPassword');
+        if (!usernameEl || !passwordEl) return;
+
+        const username = usernameEl.value.trim();
+        const password = passwordEl.value.trim();
+
+        const users = getUserList();
+        const found = users.find(u => u.username === username && u.password === password && u.status === 'Aktif');
+
+        if (found) {
+            lsSet(LS.AUTH_USER, found);
+            showToast('Login berhasil! Selamat datang, ' + found.nama);
+            checkAuth();
+            triggerInitialLoad();
+            usernameEl.value = '';
+            passwordEl.value = '';
+        } else {
+            showToast('Username atau password salah / akun nonaktif!', 'error');
+        }
+    }
+
+    document.getElementById('loginForm')?.addEventListener('submit', function (e) {
+        e.preventDefault();
+        handleLoginSubmit();
+    });
+
+    document.getElementById('btnLogoutAtasan')?.addEventListener('click', function (e) {
+        e.preventDefault();
+        localStorage.removeItem(LS.AUTH_USER);
+        showToast('Anda telah logout.', 'warning');
+        setTimeout(() => {
+            window.location.reload();
+        }, 800);
+    });
+
+    // ======================== SHEETJS EXCEL IMPORTER ========================
+    let importedData = [];
+    let importType = '';
+
+    const excelDropZone = document.getElementById('excelDropZone');
+    const excelFileInput = document.getElementById('excelFileInput');
+    const importTemplateSelect = document.getElementById('importTemplateSelect');
+    const excelPreviewArea = document.getElementById('excelPreviewArea');
+    const btnCancelImport = document.getElementById('btnCancelImport');
+    const btnConfirmImport = document.getElementById('btnConfirmImport');
+
+    if (excelDropZone) {
+        excelDropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            excelDropZone.classList.add('dragover');
+        });
+        excelDropZone.addEventListener('dragleave', () => {
+            excelDropZone.classList.remove('dragover');
+        });
+        excelDropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            excelDropZone.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length) handleExcelFile(files[0]);
+        });
+        excelDropZone.addEventListener('click', (e) => {
+            if (e.target.tagName !== 'BUTTON' && e.target.tagName !== 'A') {
+                excelFileInput.click();
+            }
+        });
+    }
+
+    if (excelFileInput) {
+        excelFileInput.addEventListener('change', (e) => {
+            const files = e.target.files;
+            if (files.length) handleExcelFile(files[0]);
+        });
+    }
+
+    if (btnCancelImport) {
+        btnCancelImport.addEventListener('click', () => {
+            resetExcelImport();
+        });
+    }
+
+    if (btnConfirmImport) {
+        btnConfirmImport.addEventListener('click', () => {
+            processExcelImport();
+        });
+    }
+
+    function resetExcelImport() {
+        if (excelFileInput) excelFileInput.value = '';
+        if (excelPreviewArea) excelPreviewArea.style.display = 'none';
+        if (btnConfirmImport) btnConfirmImport.disabled = true;
+        importedData = [];
+        importType = '';
+    }
+
+    function handleExcelFile(file) {
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function (e) {
+            try {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const firstSheetName = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[firstSheetName];
+                const jsonData = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
+
+                importType = importTemplateSelect ? importTemplateSelect.value : 'penyadap';
+                previewAndValidateExcelData(jsonData, importType);
+            } catch (err) {
+                showToast("Gagal membaca file Excel: " + err.message, "error");
+            }
+        };
+        reader.readAsArrayBuffer(file);
+    }
+
+    function previewAndValidateExcelData(jsonData, type) {
+        if (!jsonData || !jsonData.length) {
+            showToast("File Excel kosong atau tidak terbaca!", "error");
+            return;
+        }
+
+        const thead = document.getElementById('excelPreviewThead');
+        const tbody = document.getElementById('excelPreviewTbody');
+        const statusEl = document.getElementById('excelValidationStatus');
+
+        if (!thead || !tbody) return;
+        thead.innerHTML = '';
+        tbody.innerHTML = '';
+
+        let columns = [];
+        let validationErrors = 0;
+        let processedRows = [];
+
+        const mandors = getMandorList();
+        const petaks = getPetakList();
+        const tpgs = getTpgList();
+        const rphs = getRphList();
+        const bkphs = getBkphList();
+
+        const getRowVal = (row, possibleKeys) => {
+            for (const key of Object.keys(row)) {
+                const cleanKey = key.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+                for (const pk of possibleKeys) {
+                    if (cleanKey === pk.toLowerCase().replace(/[^a-z0-9]/g, '')) {
+                        return row[key];
+                    }
+                }
+            }
+            return '';
+        };
+
+        if (type === 'penyadap') {
+            columns = ['Nama Penyadap', 'Petak (Kode)', 'Mandor (Nama)', 'Pohon Garapan', 'Luas Garapan (Ha)', 'Status', 'Validasi'];
+            thead.innerHTML = `<tr>${columns.map(c => `<th>${c}</th>`).join('')}</tr>`;
+
+            jsonData.forEach(row => {
+                const nama = getRowVal(row, ['Nama Penyadap', 'nama', 'penyadap']);
+                const petakKode = getRowVal(row, ['Petak', 'Kode Petak', 'petak']);
+                const mandorNama = getRowVal(row, ['Mandor', 'Nama Mandor', 'mandor']);
+                const pohon = parseInt(getRowVal(row, ['Pohon Garapan', 'pohon', 'jumlah pohon'])) || 0;
+                const luas = parseFloat(getRowVal(row, ['Luas Garapan', 'luas', 'luas garapan'])) || 0;
+                const status = getRowVal(row, ['Status', 'status']) || 'Aktif';
+
+                let errors = [];
+                if (!nama) errors.push("Nama penyadap kosong");
+
+                const matchedPetak = petaks.find(p => p.nomor_petak === petakKode || p.kode === petakKode);
+                if (!petakKode) errors.push("Petak kosong");
+                else if (!matchedPetak) errors.push(`Petak "${petakKode}" tidak terdaftar`);
+
+                const matchedMandor = mandors.find(m => (m.nama_mandor || m.nama).toLowerCase() === mandorNama.toString().toLowerCase());
+                if (!mandorNama) errors.push("Mandor kosong");
+                else if (!matchedMandor) errors.push(`Mandor "${mandorNama}" tidak terdaftar`);
+
+                if (pohon <= 0) errors.push("Pohon garapan harus > 0");
+
+                const isValid = errors.length === 0;
+                if (!isValid) validationErrors++;
+
+                processedRows.push({
+                    valid: isValid,
+                    data: {
+                        nama_penyadap: nama,
+                        id_petak: matchedPetak ? matchedPetak.id_petak : '',
+                        petak_kode: petakKode,
+                        id_mandor: matchedMandor ? (matchedMandor.id_mandor || matchedMandor.id) : '',
+                        pohon,
+                        luas,
+                        status: status.trim() === 'Nonaktif' ? 'Nonaktif' : 'Aktif'
+                    }
+                });
+
+                tbody.innerHTML += `
+                    <tr class="${isValid ? '' : 'invalid-row'}" style="${isValid ? '' : 'background-color: #ffebee;'}">
+                        <td><strong>${nama || '-'}</strong></td>
+                        <td><code>${petakKode || '-'}</code></td>
+                        <td>${mandorNama || '-'}</td>
+                        <td>${pohon} pohon</td>
+                        <td>${luas} Ha</td>
+                        <td><span class="status-badge-${status.toLowerCase().trim()}">${status}</span></td>
+                        <td style="color: ${isValid ? 'green' : 'red'}; font-weight: 600;">
+                            ${isValid ? '✅ OK' : '❌ ' + errors.join(', ')}
+                        </td>
+                    </tr>
+                `;
+            });
+
+        } else if (type === 'petak') {
+            columns = ['Kode Petak', 'Anak Petak', 'Luas (Ha)', 'Jumlah Pohon', 'Nama TPG', 'Status', 'Validasi'];
+            thead.innerHTML = `<tr>${columns.map(c => `<th>${c}</th>`).join('')}</tr>`;
+
+            jsonData.forEach(row => {
+                const kode = getRowVal(row, ['Kode Petak', 'kode', 'petak']);
+                const anak = getRowVal(row, ['Anak Petak', 'anak']);
+                const luas = parseFloat(getRowVal(row, ['Luas', 'Luas Lahan', 'luas'])) || 0;
+                const pohon = parseInt(getRowVal(row, ['Jumlah Pohon', 'pohon', 'total pohon'])) || 0;
+                const tpgNama = getRowVal(row, ['Nama TPG', 'tpg']);
+                const status = getRowVal(row, ['Status', 'status']) || 'Aktif';
+
+                let errors = [];
+                if (!kode) errors.push("Kode petak kosong");
+                if (luas <= 0) errors.push("Luas harus > 0");
+                if (pohon <= 0) errors.push("Pohon harus > 0");
+
+                const matchedTpg = tpgs.find(t => t.nama_tpg.toLowerCase() === tpgNama.toString().toLowerCase());
+                if (!tpgNama) errors.push("TPG kosong");
+                else if (!matchedTpg) errors.push(`TPG "${tpgNama}" tidak terdaftar`);
+
+                const isValid = errors.length === 0;
+                if (!isValid) validationErrors++;
+
+                processedRows.push({
+                    valid: isValid,
+                    data: {
+                        nomor_petak: kode,
+                        anak_petak: anak,
+                        luas,
+                        pohon,
+                        id_tpg: matchedTpg ? matchedTpg.id_tpg : '',
+                        status: status.trim() === 'Nonaktif' ? 'Nonaktif' : 'Aktif'
+                    }
+                });
+
+                tbody.innerHTML += `
+                    <tr class="${isValid ? '' : 'invalid-row'}" style="${isValid ? '' : 'background-color: #ffebee;'}">
+                        <td><code>${kode || '-'}</code></td>
+                        <td>${anak || '-'}</td>
+                        <td>${luas} Ha</td>
+                        <td>${pohon} pohon</td>
+                        <td>${tpgNama || '-'}</td>
+                        <td><span class="status-badge-${status.toLowerCase().trim()}">${status}</span></td>
+                        <td style="color: ${isValid ? 'green' : 'red'}; font-weight: 600;">
+                            ${isValid ? '✅ OK' : '❌ ' + errors.join(', ')}
+                        </td>
+                    </tr>
+                `;
+            });
+
+        } else if (type === 'target') {
+            columns = ['Tahun', 'Bulan', 'Periode', 'BKPH', 'RPH', 'TPG', 'Target (kg)', 'Target RO', 'Target RKAP', 'Target RTT', 'Validasi'];
+            thead.innerHTML = `<tr>${columns.map(c => `<th>${c}</th>`).join('')}</tr>`;
+
+            jsonData.forEach(row => {
+                const tahun = parseInt(getRowVal(row, ['Tahun', 'tahun'])) || new Date().getFullYear();
+                const bulan = parseInt(getRowVal(row, ['Bulan', 'bulan'])) || (new Date().getMonth() + 1);
+                const periode = parseInt(getRowVal(row, ['Periode', 'periode'])) || 1;
+                const bkphNama = getRowVal(row, ['BKPH', 'Nama BKPH', 'bkph']);
+                const rphNama = getRowVal(row, ['RPH', 'Nama RPH', 'rph']);
+                const tpgNama = getRowVal(row, ['TPG', 'Nama TPG', 'tpg']);
+                const tahunan = parseFloat(getRowVal(row, ['Target', 'Target Per TPG (kg)', 'Target Per TPG'])) || 0;
+                const target_ro = parseFloat(getRowVal(row, ['Target RO (kg)', 'Target RO', 'ro'])) || tahunan;
+                const target_rkap = parseFloat(getRowVal(row, ['Target RKAP (kg)', 'Target RKAP', 'rkap'])) || 0;
+                const target_rtt = parseFloat(getRowVal(row, ['Target RTT (kg)', 'Target RTT', 'rtt'])) || 0;
+
+                let errors = [];
+                if (tahun < 2020 || tahun > 2030) errors.push("Tahun tidak valid (2020-2030)");
+                if (bulan < 1 || bulan > 12) errors.push("Bulan tidak valid (1-12)");
+                if (periode !== 1 && periode !== 2) errors.push("Periode harus 1 atau 2");
+                if (tahunan <= 0) errors.push("Target harus > 0");
+
+                const matchedBkph = bkphs.find(b => b.nama_bkph.toLowerCase().includes(bkphNama.toString().toLowerCase()));
+                const matchedRph = rphs.find(r => r.nama_rph.toLowerCase().includes(rphNama.toString().toLowerCase()));
+                const matchedTpg = tpgs.find(t => t.nama_tpg.toLowerCase().includes(tpgNama.toString().toLowerCase()));
+
+                if (!bkphNama) errors.push("BKPH kosong");
+                else if (!matchedBkph) errors.push(`BKPH "${bkphNama}" tidak terdaftar`);
+
+                if (!rphNama) errors.push("RPH kosong");
+                else if (!matchedRph) errors.push(`RPH "${rphNama}" tidak terdaftar`);
+
+                if (!tpgNama) errors.push("TPG kosong");
+                else if (!matchedTpg) errors.push(`TPG "${tpgNama}" tidak terdaftar`);
+
+                const isValid = errors.length === 0;
+                if (!isValid) validationErrors++;
+
+                processedRows.push({
+                    valid: isValid,
+                    data: {
+                        tahun,
+                        bulan,
+                        periode,
+                        tahunan,
+                        target_ro,
+                        target_rkap,
+                        target_rtt,
+                        id_bkph: matchedBkph ? matchedBkph.id_bkph : '',
+                        id_rph: matchedRph ? matchedRph.id_rph : '',
+                        id_tpg: matchedTpg ? matchedTpg.id_tpg : '',
+                        status: 'Aktif'
+                    }
+                });
+
+                tbody.innerHTML += `
+                    <tr class="${isValid ? '' : 'invalid-row'}" style="${isValid ? '' : 'background-color: #ffebee;'}">
+                        <td>${tahun}</td>
+                        <td>Bulan ${bulan}</td>
+                        <td>P${periode}</td>
+                        <td>${bkphNama || '-'}</td>
+                        <td>${rphNama || '-'}</td>
+                        <td>${tpgNama || '-'}</td>
+                        <td><strong>${tahunan} kg</strong></td>
+                        <td>${target_ro} kg</td>
+                        <td>${target_rkap} kg</td>
+                        <td>${target_rtt} kg</td>
+                        <td style="color: ${isValid ? 'green' : 'red'}; font-weight: 600;">
+                            ${isValid ? '✅ OK' : '❌ ' + errors.join(', ')}
+                        </td>
+                    </tr>
+                `;
+            });
+
+        } else if (type === 'user') {
+            columns = ['Nama Lengkap', 'Username', 'Password', 'Role', 'Wilayah Akses', 'Status', 'Validasi'];
+            thead.innerHTML = `<tr>${columns.map(c => `<th>${c}</th>`).join('')}</tr>`;
+
+            jsonData.forEach(row => {
+                const nama = getRowVal(row, ['Nama Lengkap', 'nama']);
+                const username = getRowVal(row, ['Username', 'username']);
+                const password = getRowVal(row, ['Password', 'password']);
+                const role = getRowVal(row, ['Role', 'role']);
+                const wilayah = getRowVal(row, ['Wilayah Akses', 'wilayah akses', 'wilayah']) || 'ALL';
+                const status = getRowVal(row, ['Status', 'status']) || 'Aktif';
+
+                let errors = [];
+                if (!nama) errors.push("Nama lengkap kosong");
+                if (!username) errors.push("Username kosong");
+                if (!password) errors.push("Password kosong");
+                if (!['Admin BKPH', 'KRPH / ASPER', 'Pimpinan'].includes(role)) errors.push("Role harus 'Admin BKPH', 'KRPH / ASPER', atau 'Pimpinan'");
+
+                const isValid = errors.length === 0;
+                if (!isValid) validationErrors++;
+
+                processedRows.push({
+                    valid: isValid,
+                    data: {
+                        nama,
+                        username,
+                        password,
+                        role,
+                        wilayah_akses: wilayah,
+                        status: status.trim() === 'Nonaktif' ? 'Nonaktif' : 'Aktif'
+                    }
+                });
+
+                tbody.innerHTML += `
+                    <tr class="${isValid ? '' : 'invalid-row'}" style="${isValid ? '' : 'background-color: #ffebee;'}">
+                        <td><strong>${nama || '-'}</strong></td>
+                        <td><code>${username || '-'}</code></td>
+                        <td>••••••</td>
+                        <td>${role || '-'}</td>
+                        <td>${wilayah}</td>
+                        <td><span class="status-badge-${status.toLowerCase().trim()}">${status}</span></td>
+                        <td style="color: ${isValid ? 'green' : 'red'}; font-weight: 600;">
+                            ${isValid ? '✅ OK' : '❌ ' + errors.join(', ')}
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+
+        if (statusEl) {
+            if (validationErrors > 0) {
+                statusEl.innerHTML = `<span style="color: red; font-weight: 800;">⚠️ Terdapat ${validationErrors} baris data tidak valid. Perbaiki data sebelum impor.</span>`;
+                btnConfirmImport.disabled = true;
+            } else {
+                statusEl.innerHTML = `<span style="color: green; font-weight: 800;">✓ Semua ${jsonData.length} baris data valid. Siap diimpor!</span>`;
+                btnConfirmImport.disabled = false;
+            }
+        }
+
+        excelPreviewArea.style.display = 'block';
+        importedData = processedRows;
+    }
+
+    function processExcelImport() {
+        if (!importedData || !importedData.length) return;
+
+        const type = importType;
+        const validRows = importedData.filter(r => r.valid).map(r => r.data);
+
+        if (!validRows.length) {
+            showToast("Tidak ada data valid yang dapat diimpor!", "error");
+            return;
+        }
+
+        if (type === 'penyadap') {
+            let list = getPenyadapList();
+            validRows.forEach(row => {
+                const id = 'p' + Date.now() + Math.floor(Math.random() * 1000);
+                const matchedPetak = getPetakList().find(p => p.id_petak === row.id_petak);
+                const entry = {
+                    id_penyadap: id,
+                    nama_penyadap: row.nama_penyadap,
+                    id_mandor: row.id_mandor,
+                    id_petak: row.id_petak,
+                    status: row.status,
+                    pohon: row.pohon,
+                    luas: row.luas,
+                    target: 3600,
+                    periode1: 150,
+                    periode2: 150,
+                    id: id,
+                    nama: row.nama_penyadap,
+                    petak: matchedPetak ? matchedPetak.nomor_petak : row.petak_kode
+                };
+                list.push(entry);
+
+                queueOfflineCrud({ action: 'savePenyadap', data: entry });
+            });
+            lsSet(LS.PENYADAP, list);
+            renderPenyadapTable();
+
+        } else if (type === 'petak') {
+            let list = getPetakList();
+            validRows.forEach(row => {
+                const id = 'b' + Date.now() + Math.floor(Math.random() * 1000);
+                const entry = {
+                    id_petak: id,
+                    nomor_petak: row.nomor_petak,
+                    anak_petak: row.anak_petak,
+                    luas: row.luas,
+                    id_tpg: row.id_tpg,
+                    pohon: row.pohon,
+                    status: row.status,
+                    id: id,
+                    kode: row.nomor_petak
+                };
+                list.push(entry);
+
+                queueOfflineCrud({ action: 'savePetak', data: entry });
+            });
+            lsSet(LS.PETAK, list);
+            renderPetakListTable();
+
+        } else if (type === 'target') {
+            let list = getTargetList();
+            validRows.forEach(row => {
+                const id = 't-' + row.id_tpg + '-' + row.tahun + '-' + row.bulan + '-' + row.periode;
+                const entry = {
+                    id_target: id,
+                    petak: '',
+                    tahun: row.tahun.toString(),
+                    bulan: row.bulan.toString(),
+                    periode: row.periode.toString(),
+                    tahunan: row.tahunan,
+                    periode1: Math.round(row.tahunan / 24),
+                    periode2: Math.round(row.tahunan / 24),
+                    id_bkph: row.id_bkph,
+                    id_rph: row.id_rph,
+                    id_tpg: row.id_tpg,
+                    target_ro: row.target_ro,
+                    target_rkap: row.target_rkap,
+                    target_rtt: row.target_rtt,
+                    status: 'Aktif'
+                };
+                const idx = list.findIndex(t => t.id_target === id);
+                if (idx >= 0) list[idx] = entry;
+                else list.push(entry);
+
+                queueOfflineCrud({ action: 'saveTarget', data: entry });
+            });
+            lsSet(LS.TARGET, list);
+
+        } else if (type === 'user') {
+            let list = getUserList();
+            validRows.forEach(row => {
+                const id = 'u' + Date.now() + Math.floor(Math.random() * 1000);
+                const entry = {
+                    id_user: id,
+                    nama: row.nama,
+                    username: row.username,
+                    password: row.password,
+                    role: row.role,
+                    wilayah_akses: row.wilayah_akses,
+                    status: row.status
+                };
+                list.push(entry);
+
+                queueOfflineCrud({ action: 'saveUser', data: entry });
+            });
+            lsSet(LS.USER, list);
+            renderUserTable();
+        }
+
+        showToast(`Impor massal ${validRows.length} data ${type} berhasil!`);
+        resetExcelImport();
+
+        if (WEB_APP_URL && navigator.onLine) {
+            syncOfflineCrud(() => {
+                loadAllData(records => {
+                    const activeItem = document.querySelector('.sidebar-menu li.active');
+                    const activeTab = activeItem ? activeItem.getAttribute('data-tab') : 'dashboard';
+                    renderTabView(activeTab);
+                });
+            });
+        }
+    }
+
+    document.getElementById('btnDownloadTemplate')?.addEventListener('click', (e) => {
+        e.preventDefault();
+        const type = importTemplateSelect ? importTemplateSelect.value : 'penyadap';
+        downloadExcelTemplate(type);
+    });
+
+    function downloadExcelTemplate(type) {
+        let headers = [];
+        let sampleData = [];
+        let filename = '';
+
+        if (type === 'penyadap') {
+            headers = ['Nama Penyadap', 'Petak (Kode)', 'Mandor (Nama)', 'Pohon Garapan', 'Luas Garapan (Ha)', 'Status'];
+            sampleData = [
+                ['Slamet Supriadi', 'P.01', 'Mandor Wawan', 800, 2.5, 'Aktif'],
+                ['Budi Santoso', 'P.02', 'Mandor Budi', 1000, 3.0, 'Aktif']
+            ];
+            filename = 'template_master_penyadap.xlsx';
+        } else if (type === 'petak') {
+            headers = ['Kode Petak', 'Anak Petak', 'Luas Lahan (Ha)', 'Jumlah Pohon', 'Nama TPG', 'Status'];
+            sampleData = [
+                ['P.07', 'A', 12.5, 1200, 'Cikuning', 'Aktif'],
+                ['P.08', '', 10.0, 1000, 'Terlaya', 'Aktif']
+            ];
+            filename = 'template_master_petak.xlsx';
+        } else if (type === 'target') {
+            headers = ['Tahun', 'Bulan', 'Periode', 'BKPH', 'RPH', 'TPG', 'Target Per TPG (kg)', 'Target RO (kg)', 'Target RKAP (kg)', 'Target RTT (kg)'];
+            sampleData = [
+                [2026, 5, 1, 'BKPH Bantarkawung', 'RPH Cikuning', 'Cikuning', 1500, 1500, 1400, 1300],
+                [2026, 5, 2, 'BKPH Bantarkawung', 'RPH Cikuning', 'Cikuning', 1600, 1600, 1500, 1400]
+            ];
+            filename = 'template_target_produksi.xlsx';
+        } else if (type === 'user') {
+            headers = ['Nama Lengkap', 'Username', 'Password', 'Role', 'Wilayah Akses', 'Status'];
+            sampleData = [
+                ['Joni Hermawan', 'joni', 'password123', 'KRPH / ASPER', 'RPH Cikuning', 'Aktif'],
+                ['Dian Sastro', 'dian', 'pimpinan123', 'Pimpinan', 'ALL', 'Aktif']
+            ];
+            filename = 'template_master_user.xlsx';
+        }
+
+        const wb = XLSX.utils.book_new();
+        const wsData = [headers, ...sampleData];
+        const ws = XLSX.utils.aoa_to_sheet(wsData);
+        XLSX.utils.book_append_sheet(wb, ws, "Template " + type);
+        XLSX.writeFile(wb, filename);
+        showToast(`Template ${type} berhasil diunduh!`);
+    }
+
+    // ======================== DASHBOARD PERIOD FILTERS ========================
+    function filterRecordsForDashboard(records) {
+        const year = document.getElementById('dbFilterYear')?.value || 'all';
+        const month = document.getElementById('dbFilterMonth')?.value || 'all';
+        const period = document.getElementById('dbFilterPeriod')?.value || 'all';
+        const bkphId = document.getElementById('dbFilterBKPH')?.value || 'all';
+        const rphId = document.getElementById('dbFilterRPH')?.value || 'all';
+        const tpgId = document.getElementById('dbFilterTPG')?.value || 'all';
+
+        return records.filter(r => {
+            const details = getTransactionDetails(r);
+
+            if (bkphId !== 'all' && details.id_bkph !== bkphId) return false;
+            if (rphId !== 'all' && details.id_rph !== rphId) return false;
+            if (tpgId !== 'all' && details.id_tpg !== tpgId) return false;
+
+            const d = new Date(r.tanggal);
+            if (isNaN(d.getTime())) return false;
+
+            if (year !== 'all' && d.getFullYear().toString() !== year) return false;
+            if (month !== 'all' && (d.getMonth() + 1).toString() !== month) return false;
+            if (period !== 'all') {
+                const day = d.getDate();
+                const recordPeriod = day <= 15 ? '1' : '2';
+                if (recordPeriod !== period) return false;
+            }
+
+            return true;
+        });
+    }
+
+    document.getElementById('btnApplyDbFilter')?.addEventListener('click', () => {
+        const filtered = filterRecordsForDashboard(globalRecords);
+        renderDashboard(filtered);
+        renderMap(filtered);
+        showToast('Filter dashboard berhasil diterapkan!');
+    });
+
+    function populatePetakDropdowns() {
+        populatePetakSelect('inputPetakPenyadap');
+    }
 
     document.getElementById('btnPrintReport')?.addEventListener('click', () => {
         const span = document.getElementById('printDateSpan');
@@ -1784,7 +3549,7 @@ document.addEventListener('DOMContentLoaded', function () {
         const step = (ts) => {
             if (!startTs) startTs = ts;
             const prog = Math.min((ts - startTs) / dur, 1);
-            const cur  = prog * (end - start) + start;
+            const cur = prog * (end - start) + start;
             el.innerHTML = (isInt ? Math.floor(cur) : cur.toFixed(1)) + suffix;
             if (prog < 1) requestAnimationFrame(step);
         };
@@ -1800,6 +3565,24 @@ document.addEventListener('DOMContentLoaded', function () {
             });
         }
     });
+
+    function triggerInitialLoad() {
+        // Load data & render dashboard
+        loadAllData(records => {
+            const activeItem = document.querySelector('.sidebar-menu li.active');
+            const activeTab = activeItem ? activeItem.getAttribute('data-tab') : 'dashboard';
+
+            console.log(`Data sinkronisasi selesai. Refreshing tab: ${activeTab}`);
+
+            renderTabView(activeTab);
+            renderMap(records);
+            populatePetakDropdowns();
+
+            // Populate cascading select inputs with values from current data
+            initFilterCascadingSelects();
+            initReportCascadingSelects();
+        });
+    }
 
     // ======================== INITIAL LOAD ========================
     // Run schema migration first
@@ -1818,21 +3601,8 @@ document.addEventListener('DOMContentLoaded', function () {
     const pds = document.getElementById('printDateSpan');
     if (pds) pds.textContent = new Date().toLocaleDateString('id-ID');
 
-    // Load data & render dashboard
-    loadAllData(records => {
-        // Find current active tab and re-render it
-        const activeItem = document.querySelector('.sidebar-menu li.active');
-        const activeTab = activeItem ? activeItem.getAttribute('data-tab') : 'dashboard';
-        
-        console.log(`Data sinkronisasi selesai. Refreshing tab: ${activeTab}`);
-        
-        // Render current tab with new data
-        renderTabView(activeTab);
-        
-        // Also ensure map and dropdowns are updated
-        renderMap(records);
-        populatePetakDropdowns();
-        
-        // If we are on dashboard, renderDashboard is already called by renderTabView
-    });
+    // Run authentication check on startup
+    if (checkAuth()) {
+        triggerInitialLoad();
+    }
 });

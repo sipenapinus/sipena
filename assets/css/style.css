@@ -1775,3 +1775,171 @@ body.standalone-mobile .android-screen {
     to   { opacity: 1; transform: translateX(-50%) translateY(0); }
 }
 
+/* =============================================
+   EXCEL IMPORT & PREVIEW STYLES
+   ============================================= */
+
+.excel-uploader-card {
+    background: var(--bg-card);
+    border: 2px dashed var(--accent);
+    border-radius: 16px;
+    padding: 40px;
+    text-align: center;
+    cursor: pointer;
+    transition: var(--transition);
+    margin-bottom: 24px;
+    box-shadow: var(--shadow);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.excel-uploader-card:hover {
+    border-color: var(--accent-hover);
+    background-color: var(--primary-ultra-light);
+}
+
+.excel-uploader-card svg {
+    width: 64px;
+    height: 64px;
+    stroke: var(--primary-light);
+    margin-bottom: 16px;
+    fill: none;
+}
+
+.excel-uploader-card h4 {
+    font-size: 1.2rem;
+    font-weight: 700;
+    margin-bottom: 8px;
+    color: var(--primary);
+}
+
+.excel-uploader-card p {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+}
+
+.excel-preview-container {
+    max-height: 320px;
+    overflow-y: auto;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    margin: 16px 0;
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.02);
+    background: #fdfdfd;
+}
+
+.excel-preview-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.excel-preview-table th {
+    background: var(--primary);
+    color: white;
+    position: sticky;
+    top: 0;
+    padding: 12px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    border-bottom: 2px solid var(--border);
+    z-index: 10;
+}
+
+.excel-preview-table td {
+    padding: 10px 12px;
+    font-size: 0.85rem;
+    border-bottom: 1px solid var(--border);
+    color: var(--text-main);
+}
+
+.excel-preview-row-invalid {
+    background-color: #ffeef0 !important;
+    border-left: 4px solid var(--danger);
+}
+
+.excel-validation-badge {
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.excel-validation-badge.success {
+    background: var(--success-bg);
+    color: var(--success);
+}
+
+.excel-validation-badge.error {
+    background: var(--danger-bg);
+    color: var(--danger);
+}
+
+/* =============================================
+   ATASAN LOGIN CARD & OVERLAY
+   ============================================= */
+
+.atasan-login-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, rgba(27, 67, 50, 0.98) 0%, rgba(18, 55, 42, 0.98) 100%);
+    backdrop-filter: blur(8px);
+    z-index: 99999;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transition: var(--transition);
+}
+
+.atasan-login-card {
+    background: white;
+    padding: 40px;
+    border-radius: 20px;
+    width: 100%;
+    max-width: 440px;
+    box-shadow: var(--shadow-lg), 0 10px 40px rgba(0, 0, 0, 0.15);
+    border: 1px solid var(--border);
+    animation: zoomIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes zoomIn {
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
+}
+
+/* =============================================
+   FORM LAYOUT ADJUSTMENTS
+   ============================================= */
+
+.input-with-action {
+    display: flex;
+    gap: 8px;
+    width: 100%;
+}
+
+.btn-add-inline {
+    background: var(--primary-light);
+    color: white;
+    border: none;
+    width: 42px;
+    height: 42px;
+    border-radius: 8px;
+    font-size: 1.5rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: var(--transition);
+}
+
+.btn-add-inline:hover {
+    background: var(--primary);
+}
+
+

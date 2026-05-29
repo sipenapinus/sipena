@@ -9,6 +9,7 @@
         content="Sistem Informasi Monitoring Produksi Getah Pinus berbasis Mandor dan Wilayah Sadap">
     <link rel="stylesheet" href="assets/css/style.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head>
 
 <body>
@@ -40,11 +41,9 @@
             <li data-tab="pimpinan">
                 <a href="#pimpinan">
                     <svg viewBox="0 0 24 24">
-                        <path
-                            d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"
-                            stroke="currentColor" stroke-width="2" fill="none"></path>
+                        <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" stroke="currentColor" stroke-width="2" fill="none"></path>
                     </svg>
-                    <span>Dashboard Monitoring Mandor</span>
+                    <span>Monitoring Mandor</span>
                 </a>
             </li>
             <li data-tab="mandor">
@@ -58,14 +57,32 @@
                     <span>Kelola Mandor</span>
                 </a>
             </li>
-            <li data-tab="petak-target">
-                <a href="#petak-target">
+            <li data-tab="wilayah">
+                <a href="#wilayah">
                     <svg viewBox="0 0 24 24">
                         <polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"></polygon>
                         <line x1="9" y1="3" x2="9" y2="18"></line>
                         <line x1="15" y1="6" x2="15" y2="21"></line>
                     </svg>
-                    <span>Kelola Petak & Target</span>
+                    <span>Kelola Wilayah & Target</span>
+                </a>
+            </li>
+            <li data-tab="penyadap">
+                <a href="#penyadap">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                        <circle cx="9" cy="7" r="4"></circle>
+                    </svg>
+                    <span>Kelola Penyadap</span>
+                </a>
+            </li>
+            <li data-tab="user">
+                <a href="#user">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                        <circle cx="12" cy="7" r="4"></circle>
+                    </svg>
+                    <span>Kelola User</span>
                 </a>
             </li>
             <li data-tab="monitoring">
@@ -77,15 +94,6 @@
                     <span>Monitoring Harian</span>
                 </a>
             </li>
-            <!-- <li data-tab="input-data">
-                <a href="#input-data">
-                    <svg viewBox="0 0 24 24">
-                        <rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect>
-                        <line x1="12" y1="18" x2="12.01" y2="18"></line>
-                    </svg>
-                    <span>Input Data Mandor</span>
-                </a>
-            </li> -->
             <li data-tab="peta-wilayah">
                 <a href="#peta-wilayah">
                     <svg viewBox="0 0 24 24">
@@ -103,6 +111,26 @@
                         <polyline points="14 2 14 8 20 8"></polyline>
                     </svg>
                     <span>Laporan & Evaluasi</span>
+                </a>
+            </li>
+            <li data-tab="import-excel">
+                <a href="#import-excel">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="17 8 12 3 7 8"></polyline>
+                        <line x1="12" y1="3" x2="12" y2="15"></line>
+                    </svg>
+                    <span>Impor Excel</span>
+                </a>
+            </li>
+            <li style="margin-top: 20px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 10px;">
+                <a href="#" id="btnLogoutAtasan">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                        <polyline points="16 17 21 12 16 7"></polyline>
+                        <line x1="21" y1="12" x2="9" y2="12"></line>
+                    </svg>
+                    <span style="color: #ff6b6b; font-weight: 700;">Keluar (Logout)</span>
                 </a>
             </li>
         </ul>
@@ -188,6 +216,65 @@
                         style="width:10px; height:10px; background-color:#f5b041; border-radius:50%; display:inline-block;"></span>
                     <span>Menjalankan Demo Mode (Data Simulasi Lokal). Atur WEB_APP_URL di JS untuk menghubungkan Google
                         Sheets.</span>
+                </div>
+
+                <!-- Dashboard Period and Regional Filters -->
+                <div class="filter-card" style="margin-bottom: 20px;">
+                    <div class="filter-grid" style="grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)) auto; gap: 12px; align-items: flex-end;">
+                        <div class="form-group">
+                            <label for="dbFilterYear">Tahun</label>
+                            <select id="dbFilterYear" class="form-control">
+                                <option value="2026">2026</option>
+                                <option value="2025">2025</option>
+                                <option value="2027">2027</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="dbFilterMonth">Bulan</label>
+                            <select id="dbFilterMonth" class="form-control">
+                                <option value="all">-- Semua Bulan --</option>
+                                <option value="1">Januari</option>
+                                <option value="2">Februari</option>
+                                <option value="3">Maret</option>
+                                <option value="4">April</option>
+                                <option value="5">Mei</option>
+                                <option value="6">Juni</option>
+                                <option value="7">Juli</option>
+                                <option value="8">Agustus</option>
+                                <option value="9">September</option>
+                                <option value="10">Oktober</option>
+                                <option value="11">November</option>
+                                <option value="12">Desember</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="dbFilterPeriod">Periode</label>
+                            <select id="dbFilterPeriod" class="form-control">
+                                <option value="all">-- Semua Periode --</option>
+                                <option value="1">Periode 1 (tgl 1-15)</option>
+                                <option value="2">Periode 2 (tgl 16-akhir)</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="dbFilterBKPH">BKPH</label>
+                            <select id="dbFilterBKPH" class="form-control">
+                                <option value="all">-- Semua BKPH --</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="dbFilterRPH">RPH</label>
+                            <select id="dbFilterRPH" class="form-control">
+                                <option value="all">-- Semua RPH --</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="dbFilterTPG">TPG</label>
+                            <select id="dbFilterTPG" class="form-control">
+                                <option value="all">-- Semua TPG --</option>
+                            </select>
+                        </div>
+                        <button type="button" class="btn btn-primary" id="btnApplyDbFilter" style="height: 38px;">Terapkan</button>
+                    </div>
                 </div>
 
                 <!-- Metric Cards -->
@@ -763,28 +850,82 @@
             <div class="tab-content" id="tab-laporan">
 
                 <div class="filter-card">
-                    <div class="filter-grid">
+                    <div class="filter-grid" style="grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)) auto; gap: 12px; align-items: flex-end;">
                         <div class="form-group">
-                            <label for="filter-search">Penyadap / Kendala</label>
-                            <input type="text" id="filter-search" class="form-control"
-                                placeholder="Cari nama penyadap / kendala...">
-                        </div>
-                        <div class="form-group">
-                            <label for="filter-petak">Filter Petak</label>
-                            <select id="filter-petak" class="form-control">
-                                <option value="">Semua Petak</option>
+                            <label for="reportType">Jenis Laporan</label>
+                            <select id="reportType" class="form-control">
+                                <option value="harian">Laporan Harian</option>
+                                <option value="periode">Laporan Periode</option>
+                                <option value="bulanan">Laporan Bulanan</option>
+                                <option value="tahunan">Laporan Tahunan</option>
+                                <option value="target_vs_realisasi">Laporan Target vs Realisasi</option>
                             </select>
                         </div>
                         <div class="form-group">
-                            <label for="filter-start-date">Tanggal Mulai</label>
-                            <input type="date" id="filter-start-date" class="form-control">
+                            <label for="reportBKPH">BKPH</label>
+                            <select id="reportBKPH" class="form-control">
+                                <option value="all">-- Semua BKPH --</option>
+                            </select>
                         </div>
                         <div class="form-group">
-                            <label for="filter-end-date">Tanggal Akhir</label>
-                            <input type="date" id="filter-end-date" class="form-control">
+                            <label for="reportRPH">RPH</label>
+                            <select id="reportRPH" class="form-control">
+                                <option value="all">-- Semua RPH --</option>
+                            </select>
                         </div>
-                        <button type="button" class="btn btn-primary" id="btnFilterApply"
-                            style="height: 42px;">Terapkan</button>
+                        <div class="form-group">
+                            <label for="reportTPG">TPG</label>
+                            <select id="reportTPG" class="form-control">
+                                <option value="all">-- Semua TPG --</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="reportMandor">Mandor</label>
+                            <select id="reportMandor" class="form-control">
+                                <option value="all">-- Semua Mandor --</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="reportPenyadap">Penyadap</label>
+                            <select id="reportPenyadap" class="form-control">
+                                <option value="all">-- Semua Penyadap --</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="reportTahun">Tahun</label>
+                            <select id="reportTahun" class="form-control">
+                                <option value="2026">2026</option>
+                                <option value="2025">2025</option>
+                                <option value="2027">2027</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="reportBulan">Bulan</label>
+                            <select id="reportBulan" class="form-control">
+                                <option value="all">-- Semua Bulan --</option>
+                                <option value="1">Januari</option>
+                                <option value="2">Februari</option>
+                                <option value="3">Maret</option>
+                                <option value="4">April</option>
+                                <option value="5">Mei</option>
+                                <option value="6">Juni</option>
+                                <option value="7">Juli</option>
+                                <option value="8">Agustus</option>
+                                <option value="9">September</option>
+                                <option value="10">Oktober</option>
+                                <option value="11">November</option>
+                                <option value="12">Desember</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="reportPeriode">Periode</label>
+                            <select id="reportPeriode" class="form-control">
+                                <option value="all">-- Semua Periode --</option>
+                                <option value="1">Periode 1 (tgl 1-15)</option>
+                                <option value="2">Periode 2 (tgl 16-akhir)</option>
+                            </select>
+                        </div>
+                        <button type="button" class="btn btn-primary" id="btnFilterApply" style="height: 38px;">Terapkan</button>
                     </div>
                 </div>
 
@@ -833,6 +974,223 @@
                 </div>
             </div>
 
+            <!-- ================= TAB: KELOLA WILAYAH & TARGET ================= -->
+            <div class="tab-content" id="tab-wilayah">
+                <div class="filter-card" style="margin-bottom: 16px; padding: 12px 20px; display: flex; gap: 12px; align-items: center; justify-content: space-between;">
+                    <div style="display: flex; gap: 8px;" id="wilayahSubtabs">
+                        <button class="btn btn-primary btn-subtab" data-subtab="petak">Petak</button>
+                        <button class="btn btn-outline btn-subtab" data-subtab="tpg">TPG</button>
+                        <button class="btn btn-outline btn-subtab" data-subtab="rph">RPH</button>
+                        <button class="btn btn-outline btn-subtab" data-subtab="bkph">BKPH</button>
+                    </div>
+                    <div>
+                        <button class="btn btn-primary" id="btnTambahWilayahItem">+ Tambah Data</button>
+                    </div>
+                </div>
+
+                <!-- SUBTAB: BKPH -->
+                <div class="wilayah-subcontent" id="subcontent-bkph" style="display: none;">
+                    <div class="table-card">
+                        <div class="table-container">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Kode BKPH</th>
+                                        <th>Nama BKPH</th>
+                                        <th>Status</th>
+                                        <th style="width: 150px; text-align: center;">Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="bkphTbody">
+                                    <tr><td colspan="4" style="text-align: center; color: var(--text-muted);">Memuat data BKPH...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SUBTAB: RPH -->
+                <div class="wilayah-subcontent" id="subcontent-rph" style="display: none;">
+                    <div class="table-card">
+                        <div class="table-container">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Kode RPH</th>
+                                        <th>Nama RPH</th>
+                                        <th>BKPH Induk</th>
+                                        <th>Status</th>
+                                        <th style="width: 150px; text-align: center;">Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="rphTbody">
+                                    <tr><td colspan="5" style="text-align: center; color: var(--text-muted);">Memuat data RPH...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SUBTAB: TPG -->
+                <div class="wilayah-subcontent" id="subcontent-tpg" style="display: none;">
+                    <div class="table-card">
+                        <div class="table-container">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Kode TPG</th>
+                                        <th>Nama TPG</th>
+                                        <th>RPH Induk</th>
+                                        <th>Status</th>
+                                        <th style="width: 150px; text-align: center;">Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tpgTbody">
+                                    <tr><td colspan="5" style="text-align: center; color: var(--text-muted);">Memuat data TPG...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SUBTAB: PETAK -->
+                <div class="wilayah-subcontent" id="subcontent-petak">
+                    <div class="table-card">
+                        <div class="table-container">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Kode Petak</th>
+                                        <th>TPG Induk</th>
+                                        <th>Luas (Ha)</th>
+                                        <th>Total Pohon</th>
+                                        <th>Digarap</th>
+                                        <th>Target Tahunan (kg)</th>
+                                        <th style="width: 200px; text-align: center;">Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="petakTargetTbody">
+                                    <tr><td colspan="7" style="text-align: center; color: var(--text-muted);">Memuat data petak...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ================= TAB: KELOLA PENYADAP ================= -->
+            <div class="tab-content" id="tab-penyadap">
+                <div class="filter-card" style="margin-bottom: 16px; padding: 16px 20px; display: flex; justify-content: space-between; align-items: center;">
+                    <div style="font-size: 0.95rem; color: var(--text-muted); font-weight: 500;">
+                        Kelola data tapper getah pinus, kapasitas pohon sadap, luas garapan, dan target per penyadap.
+                    </div>
+                    <button class="btn btn-primary" id="btnTambahPenyadap">
+                        + Tambah Penyadap
+                    </button>
+                </div>
+
+                <div class="table-card">
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Nama Penyadap</th>
+                                    <th>Petak Tugas</th>
+                                    <th>Mandor Pengawas</th>
+                                    <th>Pohon / Target</th>
+                                    <th>Status</th>
+                                    <th style="width: 150px; text-align: center;">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody id="penyadapTbody">
+                                <tr><td colspan="6" style="text-align: center; color: var(--text-muted);">Memuat data penyadap...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ================= TAB: KELOLA USER ================= -->
+            <div class="tab-content" id="tab-user">
+                <div class="filter-card" style="margin-bottom: 16px; padding: 16px 20px; display: flex; justify-content: space-between; align-items: center;">
+                    <div style="font-size: 0.95rem; color: var(--text-muted); font-weight: 500;">
+                        Kelola akun login user, kewenangan akses, password, dan pembatasan wilayah akses data.
+                    </div>
+                    <button class="btn btn-primary" id="btnTambahUser">
+                        + Tambah User
+                    </button>
+                </div>
+
+                <div class="table-card">
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Nama User</th>
+                                    <th>Username</th>
+                                    <th>Role / Hak Akses</th>
+                                    <th>Wilayah Akses</th>
+                                    <th>Status</th>
+                                    <th style="width: 150px; text-align: center;">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody id="userTbody">
+                                <tr><td colspan="6" style="text-align: center; color: var(--text-muted);">Memuat data user...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ================= TAB: IMPOR EXCEL ================= -->
+            <div class="tab-content" id="tab-import-excel">
+                <div class="filter-card" style="margin-bottom: 24px;">
+                    <h3 style="font-size: 1.2rem; font-weight: 700; color: var(--primary); margin-bottom: 12px;">Pilih Modul Data Impor</h3>
+                    <div style="display: flex; gap: 16px; align-items: center; flex-wrap: wrap;">
+                        <div class="form-group" style="flex-direction: row; align-items: center; gap: 8px;">
+                            <label for="importTemplateSelect" style="font-weight: 700; color: var(--primary); white-space: nowrap; margin-bottom: 0;">Jenis Template:</label>
+                            <select id="importTemplateSelect" class="form-control" style="width: 200px; height: 38px;">
+                                <option value="penyadap">Master Penyadap</option>
+                                <option value="petak">Master Petak</option>
+                                <option value="target">Target Produksi</option>
+                                <option value="user">Master User</option>
+                            </select>
+                        </div>
+                        <a href="#" id="btnDownloadTemplate" style="font-size: 0.85rem; font-weight: 700; color: var(--accent); text-decoration: underline;" title="Download contoh format file Excel">Unduh Contoh Excel (.xlsx)</a>
+                    </div>
+                </div>
+
+                <div class="excel-uploader-card" id="excelDropZone">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="17 8 12 3 7 8"></polyline>
+                        <line x1="12" y1="3" x2="12" y2="15"></line>
+                    </svg>
+                    <h4>Seret dan Lepaskan File Excel di sini</h4>
+                    <p style="margin-bottom: 12px;">Atau klik untuk memilih file dari komputer Anda (Format .xlsx / .xls)</p>
+                    <input type="file" id="excelFileInput" accept=".xlsx, .xls" style="display: none;">
+                    <button class="btn btn-outline" onclick="document.getElementById('excelFileInput').click()">📁 Pilih Berkas</button>
+                </div>
+
+                <!-- Preview Area -->
+                <div class="filter-card" id="excelPreviewArea" style="display: none;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                        <h4 style="font-size: 1.1rem; font-weight: 700; color: var(--primary); margin: 0;">Preview & Validasi Data</h4>
+                        <div id="excelValidationStatus" style="font-size: 0.9rem; font-weight: 600;"></div>
+                    </div>
+                    <div class="excel-preview-container">
+                        <table class="excel-preview-table">
+                            <thead id="excelPreviewThead"></thead>
+                            <tbody id="excelPreviewTbody"></tbody>
+                        </table>
+                    </div>
+                    <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 16px;">
+                        <button class="btn btn-outline" id="btnCancelImport">Batal</button>
+                        <button class="btn btn-primary" id="btnConfirmImport" disabled>💾 Proses Impor Massal</button>
+                    </div>
+                </div>
+            </div>
+
         </div>
     </main>
 
@@ -849,15 +1207,25 @@
                 <input type="text" id="inputNamaMandor" class="form-control" placeholder="Masukkan nama mandor">
             </div>
             <div class="form-group" style="margin-bottom: 16px;">
-                <label for="inputNIKMandor">NIK / ID Pegawai (opsional)</label>
+                <label for="inputNIKMandor">NIK / ID Pegawai</label>
                 <input type="text" id="inputNIKMandor" class="form-control" placeholder="Contoh: 001">
             </div>
             <div class="form-group" style="margin-bottom: 16px;">
-                <label style="font-weight: 600; color: var(--text-dark);">Pilih Petak yang Diawasi</label>
-                <div id="mandorPetakCheckboxes"
-                    style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 6px; max-height: 150px; overflow-y: auto; padding: 10px; border: 1px solid var(--border); border-radius: 8px; background: #fff;">
-                    <!-- Dynamically rendered checklist -->
-                </div>
+                <label for="inputHPMandor">Nomor HP</label>
+                <input type="text" id="inputHPMandor" class="form-control" placeholder="Contoh: 08123456789">
+            </div>
+            <div class="form-group" style="margin-bottom: 16px;">
+                <label for="inputTPGMandor">TPG Induk</label>
+                <select id="inputTPGMandor" class="form-control">
+                    <!-- Populated dynamically -->
+                </select>
+            </div>
+            <div class="form-group" style="margin-bottom: 16px;">
+                <label for="inputStatusMandor">Status</label>
+                <select id="inputStatusMandor" class="form-control">
+                    <option value="Aktif">Aktif</option>
+                    <option value="Nonaktif">Nonaktif</option>
+                </select>
             </div>
             <div class="modal-footer">
                 <button class="btn btn-outline" data-modal-close="modalMandor">Batal</button>
@@ -876,25 +1244,33 @@
             <input type="hidden" id="editPetakId">
             <div class="form-group" style="margin-bottom: 16px;">
                 <label for="inputKodePetak">Kode Petak</label>
-                <input type="text" id="inputKodePetak" class="form-control" placeholder="Contoh: P.07 - B.15">
+                <input type="text" id="inputKodePetak" class="form-control" placeholder="Contoh: P.07">
+            </div>
+            <div class="form-group" style="margin-bottom: 16px;">
+                <label for="inputAnakPetak">Anak Petak (Opsional)</label>
+                <input type="text" id="inputAnakPetak" class="form-control" placeholder="Contoh: A">
             </div>
             <div class="form-group" style="margin-bottom: 16px;">
                 <label for="inputLuasPetak">Luas Lahan (Hektar)</label>
-                <input type="number" id="inputLuasPetak" class="form-control" placeholder="Contoh: 12.5" step="0.1"
-                    min="0.1">
+                <input type="number" id="inputLuasPetak" class="form-control" placeholder="Contoh: 12.5" step="0.1" min="0.1">
             </div>
             <div class="form-group" style="margin-bottom: 16px;">
                 <label for="inputPohonPetak">Jumlah Pohon di Petak Ini</label>
                 <input type="number" id="inputPohonPetak" class="form-control" placeholder="Contoh: 1200" min="10">
             </div>
-            
-            <div style="font-weight: 700; font-size: 0.9rem; color: var(--primary); margin: 18px 0 8px 0; border-bottom: 1px solid var(--border); padding-bottom: 4px;">Target Produksi Hutan (Tahun 2026)</div>
             <div class="form-group" style="margin-bottom: 16px;">
-                <label for="inputTargetTahunan">Target Tahunan Petak (kg)</label>
-                <input type="number" id="inputTargetTahunan" class="form-control" placeholder="Contoh: 3600" min="0">
+                <label for="inputTPGPetak">TPG Induk</label>
+                <select id="inputTPGPetak" class="form-control">
+                    <!-- Populated dynamically -->
+                </select>
             </div>
-
-
+            <div class="form-group" style="margin-bottom: 16px;">
+                <label for="inputStatusPetak">Status</label>
+                <select id="inputStatusPetak" class="form-control">
+                    <option value="Aktif">Aktif</option>
+                    <option value="Nonaktif">Nonaktif</option>
+                </select>
+            </div>
             <div class="modal-footer">
                 <button class="btn btn-outline" data-modal-close="modalPetak">Batal</button>
                 <button class="btn btn-primary" id="btnSimpanPetak">Simpan</button>
@@ -906,14 +1282,33 @@
     <div class="modal" id="modalPenyadap">
         <div class="modal-content">
             <div class="modal-header">
-                <span class="modal-title" id="modalPenyadapTitle">Tambah Penyadap</span>
+                <span class="modal-title" id="modalPenyadapTitle">Tambah/Edit Penyadap</span>
                 <button class="modal-close" data-modal-close="modalPenyadap">×</button>
             </div>
             <input type="hidden" id="editPenyadapId">
-            <input type="hidden" id="editPenyadapPetakId">
             <div class="form-group" style="margin-bottom: 16px;">
                 <label for="inputNamaPenyadap">Nama Lengkap Penyadap</label>
                 <input type="text" id="inputNamaPenyadap" class="form-control" placeholder="Masukkan nama penyadap">
+            </div>
+            <div class="form-group" style="margin-bottom: 16px;">
+                <label for="inputMandorPenyadap">Mandor Pengawas</label>
+                <select id="inputMandorPenyadap" class="form-control">
+                    <!-- Populated dynamically -->
+                </select>
+            </div>
+            <div class="form-group" style="margin-bottom: 16px;">
+                <label for="inputPetakPenyadap">Petak Tugas</label>
+                <select id="inputPetakPenyadap" class="form-control">
+                    <!-- Populated dynamically -->
+                </select>
+            </div>
+            <div class="form-group" style="margin-bottom: 16px;">
+                <label for="inputPohonPenyadap">Jumlah Pohon Garapan</label>
+                <input type="number" id="inputPohonPenyadap" class="form-control" placeholder="Contoh: 800" min="0">
+            </div>
+            <div class="form-group" style="margin-bottom: 16px;">
+                <label for="inputLuasPenyadap">Luas Lahan Garapan (Ha)</label>
+                <input type="number" id="inputLuasPenyadap" class="form-control" placeholder="Contoh: 2.5" step="0.1" min="0">
             </div>
             <div class="form-group" style="margin-bottom: 16px;">
                 <label for="inputStatusPenyadap">Status</label>
@@ -929,7 +1324,7 @@
         </div>
     </div>
 
-    <!-- ============= MODAL: SET TARGET PENYADAP ============= -->
+    <!-- ============= MODAL: SET TARGET PETAK ============= -->
     <div class="modal" id="modalTarget">
         <div class="modal-content" style="max-width: 520px;">
             <div class="modal-header">
@@ -937,45 +1332,63 @@
                 <button class="modal-close" data-modal-close="modalTarget">×</button>
             </div>
             <input type="hidden" id="targetPetakKode">
+            <input type="hidden" id="editTargetId">
 
-            <div class="target-info-box" style="margin-bottom: 16px;">
-                <div class="target-info-label">Penyadap di Petak Ini:</div>
-                <div id="modalTargetPenyadapNames" class="target-info-value">-</div>
+            <div class="form-group" style="margin-bottom: 14px;">
+                <label for="targetBKPHSelect">BKPH</label>
+                <select id="targetBKPHSelect" class="form-control"></select>
             </div>
-
+            <div class="form-group" style="margin-bottom: 14px;">
+                <label for="targetRPHSelect">RPH</label>
+                <select id="targetRPHSelect" class="form-control"></select>
+            </div>
+            <div class="form-group" style="margin-bottom: 14px;">
+                <label for="targetTPGSelect">TPG</label>
+                <select id="targetTPGSelect" class="form-control"></select>
+            </div>
             <div class="form-group" style="margin-bottom: 14px;">
                 <label for="targetTahun">Tahun Target</label>
                 <input type="number" id="targetTahun" class="form-control" value="2026" min="2020" max="2030">
             </div>
-
-            <div class="target-section-title" style="margin-bottom: 10px;">Target Tahunan</div>
+            <div class="form-group" style="margin-bottom: 14px;">
+                <label for="targetBulan">Bulan</label>
+                <select id="targetBulan" class="form-control">
+                    <option value="1">Januari</option>
+                    <option value="2">Februari</option>
+                    <option value="3">Maret</option>
+                    <option value="4">April</option>
+                    <option value="5">Mei</option>
+                    <option value="6">Juni</option>
+                    <option value="7">Juli</option>
+                    <option value="8">Agustus</option>
+                    <option value="9">September</option>
+                    <option value="10">Oktober</option>
+                    <option value="11">November</option>
+                    <option value="12">Desember</option>
+                </select>
+            </div>
+            <div class="form-group" style="margin-bottom: 14px;">
+                <label for="targetPeriode">Periode</label>
+                <select id="targetPeriode" class="form-control">
+                    <option value="1">Periode 1 (tgl 1-15)</option>
+                    <option value="2">Periode 2 (tgl 16-akhir)</option>
+                </select>
+            </div>
             <div class="form-group" style="margin-bottom: 8px;">
-                <label for="targetTahunanTotal">Target Per Petak / 1 Tahun (kg)</label>
-                <input type="number" id="targetTahunanTotal" class="form-control" placeholder="Contoh: 3600" min="0">
+                <label for="targetTahunanTotal">Target Per TPG / Periode (kg)</label>
+                <input type="number" id="targetTahunanTotal" class="form-control" placeholder="Contoh: 1500" min="0">
             </div>
-            <div class="target-derived" id="targetPerPenyadapTahunan" style="display:none; margin-bottom: 14px;">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
-                </svg>
-                <span>Per penyadap: <strong id="nilaiTargetPerPenyadap">-</strong></span>
+            <div class="form-group" style="margin-bottom: 8px;">
+                <label for="targetRO">Target RO (kg)</label>
+                <input type="number" id="targetRO" class="form-control" placeholder="Contoh: 1500" min="0">
             </div>
-
-            <div class="target-section-title" style="margin-bottom: 10px;">Target Bulanan (2 Periode/Bulan)</div>
-            <div class="target-monthly-grid" style="margin-bottom: 8px;">
-                <div class="form-group">
-                    <label for="targetBulan1">Periode 1 (tgl 1–15) (kg)</label>
-                    <input type="number" id="targetBulan1" class="form-control" placeholder="Contoh: 150" min="0">
-                </div>
-                <div class="form-group">
-                    <label for="targetBulan2">Periode 2 (tgl 16–31) (kg)</label>
-                    <input type="number" id="targetBulan2" class="form-control" placeholder="Contoh: 150" min="0">
-                </div>
+            <div class="form-group" style="margin-bottom: 8px;">
+                <label for="targetRKAP">Target RKAP (kg)</label>
+                <input type="number" id="targetRKAP" class="form-control" placeholder="Contoh: 1500" min="0">
             </div>
-            <div class="target-derived" id="targetBulananPerPenyadap" style="display:none; margin-bottom: 8px;">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
-                </svg>
-                <span>Per penyadap: <strong id="nilaiTargetBulananPenyadap">-</strong></span>
+            <div class="form-group" style="margin-bottom: 8px;">
+                <label for="targetRTT">Target RTT (kg)</label>
+                <input type="number" id="targetRTT" class="form-control" placeholder="Contoh: 1500" min="0">
             </div>
 
             <div class="modal-footer">
@@ -985,56 +1398,175 @@
         </div>
     </div>
 
-    <!-- ============= MODAL: TAMBAH PENYADAP BARU ============= -->
-    <div class="modal" id="modalTambahPenyadap">
+    <!-- ============= MODAL: TAMBAH / EDIT BKPH ============= -->
+    <div class="modal" id="modalBKPH">
         <div class="modal-content">
             <div class="modal-header">
-                <span class="modal-title">Tambah Penyadap Baru</span>
-                <button class="modal-close" data-modal-close="modalTambahPenyadap">×</button>
+                <span class="modal-title" id="modalBKPHTitle">Tambah BKPH</span>
+                <button class="modal-close" data-modal-close="modalBKPH">×</button>
+            </div>
+            <input type="hidden" id="editBKPHId">
+            <div class="form-group" style="margin-bottom: 16px;">
+                <label for="inputKodeBKPH">Kode BKPH</label>
+                <input type="text" id="inputKodeBKPH" class="form-control" placeholder="Contoh: BKPH-BTR">
             </div>
             <div class="form-group" style="margin-bottom: 16px;">
-                <label for="inputNamaPenyadap">Nama Lengkap</label>
-                <input type="text" id="inputNamaPenyadap" class="form-control" placeholder="Masukkan nama penyadap">
+                <label for="inputNamaBKPH">Nama BKPH</label>
+                <input type="text" id="inputNamaBKPH" class="form-control" placeholder="Contoh: BKPH Bantarkawung">
             </div>
             <div class="form-group" style="margin-bottom: 16px;">
-                <label for="inputPetakPenyadap">Petak Tugas</label>
-                <select id="inputPetakPenyadap" class="form-control">
-                    <option value="">-- Pilih Petak --</option>
-                </select>
-            </div>
-            <div class="form-group" style="margin-bottom: 16px;">
-                <label for="inputStatusPenyadap">Status</label>
-                <select id="inputStatusPenyadap" class="form-control">
+                <label for="inputStatusBKPH">Status</label>
+                <select id="inputStatusBKPH" class="form-control">
                     <option value="Aktif">Aktif</option>
                     <option value="Nonaktif">Nonaktif</option>
                 </select>
             </div>
             <div class="modal-footer">
-                <button class="btn btn-outline" data-modal-close="modalTambahPenyadap">Batal</button>
-                <button class="btn btn-primary" id="btnSimpanPenyadap">Simpan</button>
+                <button class="btn btn-outline" data-modal-close="modalBKPH">Batal</button>
+                <button class="btn btn-primary" id="btnSimpanBKPH">Simpan</button>
             </div>
         </div>
     </div>
 
-    <!-- ============= MODAL: TAMBAH PETAK ============= -->
-    <div class="modal" id="modalTambahPetak">
+    <!-- ============= MODAL: TAMBAH / EDIT RPH ============= -->
+    <div class="modal" id="modalRPH">
         <div class="modal-content">
             <div class="modal-header">
-                <span class="modal-title">Tambah Petak Sadap Baru</span>
-                <button class="modal-close" data-modal-close="modalTambahPetak">×</button>
+                <span class="modal-title" id="modalRPHTitle">Tambah RPH</span>
+                <button class="modal-close" data-modal-close="modalRPH">×</button>
+            </div>
+            <input type="hidden" id="editRPHId">
+            <div class="form-group" style="margin-bottom: 16px;">
+                <label for="inputKodeRPH">Kode RPH</label>
+                <input type="text" id="inputKodeRPH" class="form-control" placeholder="Contoh: RPH-CKN">
             </div>
             <div class="form-group" style="margin-bottom: 16px;">
-                <label for="inputKodePetak">Kode Petak (contoh: P.07 - B.15)</label>
-                <input type="text" id="inputKodePetak" class="form-control" placeholder="Contoh: P.07 - B.15">
+                <label for="inputNamaRPH">Nama RPH</label>
+                <input type="text" id="inputNamaRPH" class="form-control" placeholder="Contoh: RPH Cikuning">
             </div>
             <div class="form-group" style="margin-bottom: 16px;">
-                <label for="inputLuasPetak">Luas (Hektar)</label>
-                <input type="number" id="inputLuasPetak" class="form-control" placeholder="Contoh: 12.5" step="0.1">
+                <label for="inputBKPHInduk">BKPH Induk</label>
+                <select id="inputBKPHInduk" class="form-control">
+                    <!-- Populated dynamically -->
+                </select>
+            </div>
+            <div class="form-group" style="margin-bottom: 16px;">
+                <label for="inputStatusRPH">Status</label>
+                <select id="inputStatusRPH" class="form-control">
+                    <option value="Aktif">Aktif</option>
+                    <option value="Nonaktif">Nonaktif</option>
+                </select>
             </div>
             <div class="modal-footer">
-                <button class="btn btn-outline" data-modal-close="modalTambahPetak">Batal</button>
-                <button class="btn btn-primary" id="btnSimpanPetak">Simpan</button>
+                <button class="btn btn-outline" data-modal-close="modalRPH">Batal</button>
+                <button class="btn btn-primary" id="btnSimpanRPH">Simpan</button>
             </div>
+        </div>
+    </div>
+
+    <!-- ============= MODAL: TAMBAH / EDIT TPG ============= -->
+    <div class="modal" id="modalTPG">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span class="modal-title" id="modalTPGTitle">Tambah TPG</span>
+                <button class="modal-close" data-modal-close="modalTPG">×</button>
+            </div>
+            <input type="hidden" id="editTPGId">
+            <div class="form-group" style="margin-bottom: 16px;">
+                <label for="inputKodeTPG">Kode TPG</label>
+                <input type="text" id="inputKodeTPG" class="form-control" placeholder="Contoh: TPG-CKN">
+            </div>
+            <div class="form-group" style="margin-bottom: 16px;">
+                <label for="inputNamaTPG">Nama TPG</label>
+                <input type="text" id="inputNamaTPG" class="form-control" placeholder="Contoh: Cikuning">
+            </div>
+            <div class="form-group" style="margin-bottom: 16px;">
+                <label for="inputRPHInduk">RPH Induk</label>
+                <select id="inputRPHInduk" class="form-control">
+                    <!-- Populated dynamically -->
+                </select>
+            </div>
+            <div class="form-group" style="margin-bottom: 16px;">
+                <label for="inputStatusTPG">Status</label>
+                <select id="inputStatusTPG" class="form-control">
+                    <option value="Aktif">Aktif</option>
+                    <option value="Nonaktif">Nonaktif</option>
+                </select>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline" data-modal-close="modalTPG">Batal</button>
+                <button class="btn btn-primary" id="btnSimpanTPG">Simpan</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============= MODAL: TAMBAH / EDIT USER ============= -->
+    <div class="modal" id="modalUser">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span class="modal-title" id="modalUserTitle">Tambah User</span>
+                <button class="modal-close" data-modal-close="modalUser">×</button>
+            </div>
+            <input type="hidden" id="editUserId">
+            <div class="form-group" style="margin-bottom: 16px;">
+                <label for="inputNamaUser">Nama Lengkap</label>
+                <input type="text" id="inputNamaUser" class="form-control" placeholder="Contoh: Administrator">
+            </div>
+            <div class="form-group" style="margin-bottom: 16px;">
+                <label for="inputUsernameUser">Username</label>
+                <input type="text" id="inputUsernameUser" class="form-control" placeholder="Contoh: admin">
+            </div>
+            <div class="form-group" style="margin-bottom: 16px;">
+                <label for="inputPasswordUser">Password</label>
+                <input type="password" id="inputPasswordUser" class="form-control" placeholder="Masukkan password">
+            </div>
+            <div class="form-group" style="margin-bottom: 16px;">
+                <label for="inputRoleUser">Role / Hak Akses</label>
+                <select id="inputRoleUser" class="form-control">
+                    <option value="Admin BKPH">Admin BKPH</option>
+                    <option value="KRPH / ASPER">KRPH / ASPER</option>
+                    <option value="Pimpinan">Pimpinan</option>
+                </select>
+            </div>
+            <div class="form-group" style="margin-bottom: 16px;">
+                <label for="inputWilayahAksesUser">Wilayah Akses</label>
+                <input type="text" id="inputWilayahAksesUser" class="form-control" placeholder="Contoh: RPH Cikuning / ALL">
+            </div>
+            <div class="form-group" style="margin-bottom: 16px;">
+                <label for="inputStatusUser">Status</label>
+                <select id="inputStatusUser" class="form-control">
+                    <option value="Aktif">Aktif</option>
+                    <option value="Nonaktif">Nonaktif</option>
+                </select>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline" data-modal-close="modalUser">Batal</button>
+                <button class="btn btn-primary" id="btnSimpanUser">Simpan</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============= LOGIN OVERLAY ============= -->
+    <div class="atasan-login-overlay" id="loginOverlay">
+        <div class="atasan-login-card">
+            <div style="text-align: center; margin-bottom: 24px;">
+                <svg viewBox="0 0 24 24" width="48" height="48" style="stroke: var(--primary); fill: none; stroke-width: 2;">
+                    <path d="M12 2L4 15h5v5h6v-5h5L12 2z" />
+                </svg>
+                <h2 style="color: var(--primary); font-size: 1.5rem; font-weight: 800; margin-top: 12px;">Login SIPENA PINUS</h2>
+                <p style="color: var(--text-muted); font-size: 0.875rem; margin-top: 4px;">Sistem Monitoring Produksi Getah Pinus</p>
+            </div>
+            <form id="loginForm" onsubmit="event.preventDefault();">
+                <div class="form-group" style="margin-bottom: 16px;">
+                    <label for="loginUsername" style="font-weight: 700;">Username</label>
+                    <input type="text" id="loginUsername" class="form-control" placeholder="Masukkan username Anda" required>
+                </div>
+                <div class="form-group" style="margin-bottom: 24px;">
+                    <label for="loginPassword" style="font-weight: 700;">Password</label>
+                    <input type="password" id="loginPassword" class="form-control" placeholder="Masukkan password Anda" required>
+                </div>
+                <button type="submit" class="btn btn-primary" style="width: 100%; height: 44px; font-size: 1rem; font-weight: 700;" id="btnLoginSubmit">Masuk Panel</button>
+            </form>
         </div>
     </div>
 
@@ -1043,5 +1575,4 @@
 
     <script src="assets/js/app.js"></script>
 </body>
-
 </html>

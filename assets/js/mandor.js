@@ -8,8 +8,8 @@ document.addEventListener('DOMContentLoaded', function () {
     // Color constants for charts
     const GA = '#40916c'; // Actual green
     const GL = '#52b788'; // Light green
-    const Y  = '#f4a261'; // Orange/Yellow
-    const G  = '#1b4332'; // Dark green
+    const Y = '#f4a261'; // Orange/Yellow
+    const G = '#1b4332'; // Dark green
 
     // ======================== STATE MANAGEMENT ========================
     const LS = {
@@ -57,7 +57,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 .then(res => {
                     if (res.status === 'success' && res.data) {
                         const fmt = res.data.map(r => ({
-                            id: r.id || 'c-' + Math.random().toString(36).substr(2,9),
+                            id: r.id || 'c-' + Math.random().toString(36).substr(2, 9),
                             tanggal: r.tanggal || '',
                             nama_penyadap: r.nama_penyadap || '',
                             petak: r.petak || '',
@@ -239,6 +239,15 @@ document.addEventListener('DOMContentLoaded', function () {
                 .then(r => r.json())
                 .then(res => {
                     if (res.status === 'success') {
+                        if (res.bkph && Array.isArray(res.bkph)) {
+                            lsSet('sipena_bkph', res.bkph);
+                        }
+                        if (res.rph && Array.isArray(res.rph)) {
+                            lsSet('sipena_rph', res.rph);
+                        }
+                        if (res.tpg && Array.isArray(res.tpg)) {
+                            lsSet('sipena_tpg', res.tpg);
+                        }
                         if (res.penyadap && Array.isArray(res.penyadap) && res.penyadap.length) {
                             lsSet(LS.PENYADAP, res.penyadap);
                         }
@@ -272,11 +281,11 @@ document.addEventListener('DOMContentLoaded', function () {
     function getMandorList() {
         const cached = lsGet(LS.MANDOR);
         if (WEB_APP_URL) return cached || [];
-        
+
         return cached || [
-            { id: 'm1', nama: 'Mandor Wawan', nik: '001', petak: ['P.01', 'P.03'] },
-            { id: 'm2', nama: 'Mandor Budi',  nik: '002', petak: ['P.02', 'P.04'] },
-            { id: 'm3', nama: 'Mandor Kardi', nik: '003', petak: ['P.05', 'P.06'] },
+            { id: 'm1', id_mandor: 'm1', nama: 'Mandor Wawan', nama_mandor: 'Mandor Wawan', nik: '001', nomor_hp: '001', id_tpg: 't1', petak: ['P.01', 'P.03'], status: 'Aktif' },
+            { id: 'm2', id_mandor: 'm2', nama: 'Mandor Budi', nama_mandor: 'Mandor Budi', nik: '002', nomor_hp: '002', id_tpg: 't6', petak: ['P.02', 'P.04'], status: 'Aktif' },
+            { id: 'm3', id_mandor: 'm3', nama: 'Mandor Kardi', nama_mandor: 'Mandor Kardi', nik: '003', nomor_hp: '003', id_tpg: 't15', petak: ['P.05', 'P.06'], status: 'Aktif' },
         ];
     }
 
@@ -285,12 +294,12 @@ document.addEventListener('DOMContentLoaded', function () {
         if (WEB_APP_URL) return cached || [];
 
         return cached || [
-            { id: 'p1', nama: 'Slamet',  petak: 'P.01', status: 'Aktif', pohon: 800 },
-            { id: 'p2', nama: 'Budi',    petak: 'P.02', status: 'Aktif', pohon: 1000 },
-            { id: 'p3', nama: 'Sukijo',  petak: 'P.03', status: 'Aktif', pohon: 700 },
-            { id: 'p4', nama: 'Tukimin', petak: 'P.04', status: 'Aktif', pohon: 900 },
-            { id: 'p5', nama: 'Wawan',   petak: 'P.05', status: 'Aktif', pohon: 800 },
-            { id: 'p6', nama: 'Kardi',   petak: 'P.06', status: 'Aktif', pohon: 950 },
+            { id: 'p1', id_penyadap: 'p1', nama: 'Slamet', nama_penyadap: 'Slamet', petak: 'P.01', id_petak: 'b1', id_mandor: 'm1', status: 'Aktif', pohon: 800, target: 1200, luas: 1.2 },
+            { id: 'p2', id_penyadap: 'p2', nama: 'Budi', nama_penyadap: 'Budi', petak: 'P.02', id_petak: 'b2', id_mandor: 'm2', status: 'Aktif', pohon: 1000, target: 1500, luas: 1.5 },
+            { id: 'p3', id_penyadap: 'p3', nama: 'Sukijo', nama_penyadap: 'Sukijo', petak: 'P.03', id_petak: 'b3', id_mandor: 'm1', status: 'Aktif', pohon: 700, target: 1000, luas: 1.0 },
+            { id: 'p4', id_penyadap: 'p4', nama: 'Tukimin', nama_penyadap: 'Tukimin', petak: 'P.04', id_petak: 'b4', id_mandor: 'm2', status: 'Aktif', pohon: 900, target: 1300, luas: 1.3 },
+            { id: 'p5', id_penyadap: 'p5', nama: 'Wawan', nama_penyadap: 'Wawan', petak: 'P.05', id_petak: 'b5', id_mandor: 'm3', status: 'Aktif', pohon: 800, target: 1100, luas: 1.15 },
+            { id: 'p6', id_penyadap: 'p6', nama: 'Kardi', nama_penyadap: 'Kardi', petak: 'P.06', id_petak: 'b6', id_mandor: 'm3', status: 'Aktif', pohon: 950, target: 1400, luas: 1.4 },
         ];
     }
 
@@ -299,12 +308,12 @@ document.addEventListener('DOMContentLoaded', function () {
         if (WEB_APP_URL) return cached || [];
 
         return cached || [
-            { id: 'b1', kode: 'P.01', luas: 12.5, pohon: 1200 },
-            { id: 'b2', kode: 'P.02', luas: 15.0, pohon: 1500 },
-            { id: 'b3', kode: 'P.03', luas: 10.0, pohon: 1000 },
-            { id: 'b4', kode: 'P.04', luas: 13.0, pohon: 1300 },
-            { id: 'b5', kode: 'P.05', luas: 11.5, pohon: 1100 },
-            { id: 'b6', kode: 'P.06', luas: 14.0, pohon: 1400 },
+            { id: 'b1', id_petak: 'b1', kode: 'P.01', nomor_petak: 'P.01', luas: 12.5, pohon: 1200, id_tpg: 't1' },
+            { id: 'b2', id_petak: 'b2', kode: 'P.02', nomor_petak: 'P.02', luas: 15.0, pohon: 1500, id_tpg: 't6' },
+            { id: 'b3', id_petak: 'b3', kode: 'P.03', nomor_petak: 'P.03', luas: 10.0, pohon: 1000, id_tpg: 't12' },
+            { id: 'b4', id_petak: 'b4', kode: 'P.04', nomor_petak: 'P.04', luas: 13.0, pohon: 1300, id_tpg: 't14' },
+            { id: 'b5', id_petak: 'b5', kode: 'P.05', nomor_petak: 'P.05', luas: 11.5, pohon: 1100, id_tpg: 't15' },
+            { id: 'b6', id_petak: 'b6', kode: 'P.06', nomor_petak: 'P.06', luas: 14.0, pohon: 1400, id_tpg: 't2' },
         ];
     }
 
@@ -317,12 +326,17 @@ document.addEventListener('DOMContentLoaded', function () {
         const mandors = getMandorList();
         const loggedInId = localStorage.getItem('sipena_logged_in_mandor');
         const activeId = loggedInId || localStorage.getItem(LS.ACTIVE_MANDOR) || 'm1';
-        return mandors.find(m => m.id === activeId) || mandors[0];
+        return mandors.find(m => m.id === activeId || m.id_mandor === activeId) || mandors[0];
     }
 
     function getSupervisedPetaks() {
         const activeM = getActiveMandor();
-        return activeM ? (activeM.petak || []) : [];
+        if (!activeM) return [];
+        if (activeM.id_tpg) {
+            const petaks = getPetakList();
+            return petaks.filter(b => b.id_tpg === activeM.id_tpg).map(b => b.kode || b.nomor_petak);
+        }
+        return activeM.petak || [];
     }
 
     // Filter data based on active mandor
@@ -484,8 +498,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function renderTabView(tab) {
         switch (tab) {
-            case 'dashboard': 
-                renderDashboardStats(); 
+            case 'dashboard':
+                renderDashboardStats();
                 loadAllData(records => {
                     renderMandorCharts(records);
                 });
@@ -547,7 +561,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 return r.nama_penyadap === p.nama && d.getFullYear() === thisYear && d.getMonth() === thisMonth && d.getDate() > 15;
             }).reduce((s, r) => s + r.estimasi_hasil, 0);
         });
-        
+
         const p1Targets = penyadapList.map(p => (parseFloat(p.periode1) || 0));
         const p2Targets = penyadapList.map(p => (parseFloat(p.periode2) || 0));
 
@@ -559,10 +573,10 @@ document.addEventListener('DOMContentLoaded', function () {
                 { label: 'P2 Aktual (16-31)', data: p2Actuals.map(v => +v.toFixed(1)), backgroundColor: Y, borderRadius: 4 },
                 { label: 'P2 Target', data: p2Targets, backgroundColor: 'rgba(244,162,97,0.2)', borderColor: Y, borderWidth: 1, borderRadius: 4 },
             ]
-        }, { 
-            responsive: true, 
-            maintainAspectRatio: false, 
-            plugins: { 
+        }, {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
                 legend: { position: 'top' },
                 tooltip: {
                     callbacks: {
@@ -574,8 +588,8 @@ document.addEventListener('DOMContentLoaded', function () {
                         }
                     }
                 }
-            }, 
-            scales: { y: { beginAtZero: true } } 
+            },
+            scales: { y: { beginAtZero: true } }
         });
     }
 
@@ -825,8 +839,8 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         const existingP = id ? list.find(x => x.id === id) : null;
-        const newP = id ? 
-            { id, nama, petak, status, pohon: pohonInput, luas: luasInput, target: targetInput, periode1: (existingP ? (existingP.periode1 || 0) : 0), periode2: (existingP ? (existingP.periode2 || 0) : 0) } : 
+        const newP = id ?
+            { id, nama, petak, status, pohon: pohonInput, luas: luasInput, target: targetInput, periode1: (existingP ? (existingP.periode1 || 0) : 0), periode2: (existingP ? (existingP.periode2 || 0) : 0) } :
             { id: 'p' + Date.now(), nama, petak, status, pohon: pohonInput, luas: luasInput, target: targetInput, periode1: 0, periode2: 0 };
 
         if (id) {
@@ -941,7 +955,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     // Expose aturTarget to global for Mandor
-    window.aturTarget = function(petakKode) {
+    window.aturTarget = function (petakKode) {
         const targets = getTargetList();
         const thisYear = new Date().getFullYear();
         const target = targets.find(t => t.petak === petakKode && parseInt(t.tahun) === thisYear) || {
@@ -963,7 +977,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         // Calculate total target of tappers (or default to petak target)
-        const totalTapperTarget = activeWorkers.length > 0 
+        const totalTapperTarget = activeWorkers.length > 0
             ? activeWorkers.reduce((sum, w) => sum + (parseFloat(w.target) || 0), 0)
             : (parseFloat(target.tahunan) || 3600);
 
@@ -994,7 +1008,7 @@ document.addEventListener('DOMContentLoaded', function () {
                         </div>
                     </div>
                 `).join('');
-                
+
                 // Attach change listeners to dynamic inputs
                 container.querySelectorAll('input').forEach(input => {
                     input.addEventListener('input', calcAndShowTargetPerPenyadap);
@@ -1003,12 +1017,12 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         document.getElementById('modalTargetTitle').textContent = `Atur Target Petak: ${petakKode}`;
-        
+
         const modalTarget = document.getElementById('modalTarget');
         if (modalTarget) {
             modalTarget.classList.add('active');
         }
-        
+
         calcAndShowTargetPerPenyadap();
     };
 
@@ -1018,7 +1032,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (!petak) return;
 
         const elTahunan = document.getElementById('targetPerPenyadapTahunan');
-        
+
         let sumP1 = 0;
         let sumP2 = 0;
         const p1Inputs = document.querySelectorAll('.tapper-p1-input');
@@ -1052,7 +1066,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
         const p1Inputs = document.querySelectorAll('.tapper-p1-input');
         const p2Inputs = document.querySelectorAll('.tapper-p2-input');
-        
+
         let tapperUpdates = [];
         let totalP1 = 0;
         let totalP2 = 0;
@@ -1085,7 +1099,7 @@ document.addEventListener('DOMContentLoaded', function () {
         } else {
             targets.push(entry);
         }
-        
+
         lsSet(LS.TARGET, targets);
         renderTargetTable();
         document.getElementById('modalTarget')?.classList.remove('active');
@@ -1388,9 +1402,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
         // Compare entered PIN with NIK (robust comparison: handles Google Sheets removing leading zeros like "002" -> "2")
         const val1 = String(pinVal).trim();
-        const val2 = String(targetMandor.nik).trim();
-        const pinMatches = (val1 === val2) || 
-                            (!isNaN(val1) && !isNaN(val2) && parseInt(val1, 10) === parseInt(val2, 10));
+        const val2 = String(targetMandor.nik || targetMandor.nomor_hp || '').trim();
+        const pinMatches = (val1 === val2) ||
+            (!isNaN(val1) && !isNaN(val2) && parseInt(val1, 10) === parseInt(val2, 10));
 
         if (pinMatches) {
             // Success!
@@ -1464,7 +1478,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (checkAuth()) {
             initMandorSelector();
             renderDashboardStats();
-            
+
             // Reload active tab view on startup/auth success
             const activeTab = document.querySelector('.sidebar-menu li.active')?.getAttribute('data-tab') || 'dashboard';
             renderTabView(activeTab);

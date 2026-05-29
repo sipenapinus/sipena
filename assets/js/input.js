@@ -3,7 +3,6 @@
 
 // =========================================================================
 // CONFIGURATION: SALIN URL WEB APP GOOGLE APPS SCRIPT ANDA DI SINI
-// Contoh: "https://script.google.com/macros/s/AKfycbz.../exec"
 const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwTelvmwcTnXUKYx_CQKfUg82nltxUNWjHsckbCO9vNj3My_VYl2huNYqmqJZKhzO61Kg/exec";
 // =========================================================================
 
@@ -11,9 +10,96 @@ document.addEventListener('DOMContentLoaded', function () {
     let isSyncingEntries = false;
     let lastToastTime = 0;
     let toastTimeout = null;
+    let isSyncingOffline = false;
+
+    function queueOfflineCrud(actionPayload) {
+        let queue = [];
+        try {
+            queue = JSON.parse(localStorage.getItem('sipena_offline_crud')) || [];
+        } catch {
+            queue = [];
+        }
+        queue.push(actionPayload);
+        localStorage.setItem('sipena_offline_crud', JSON.stringify(queue));
+        if (!navigator.onLine) {
+            showToast('📶 Disimpan offline. Akan disinkronkan saat terhubung internet.', false);
+        }
+    }
+
+    function dequeueOfflineCrud() {
+        try {
+            let queue = JSON.parse(localStorage.getItem('sipena_offline_crud')) || [];
+            if (queue.length > 0) {
+                queue.shift();
+                localStorage.setItem('sipena_offline_crud', JSON.stringify(queue));
+            }
+        } catch (e) {
+            console.error("Gagal dequeue offline crud:", e);
+        }
+    }
+
+    function syncOfflineCrud(callback) {
+        if (isSyncingOffline) {
+            setTimeout(() => {
+                syncOfflineCrud(callback);
+            }, 1000);
+            return;
+        }
+
+        let queue = [];
+        try {
+            queue = JSON.parse(localStorage.getItem('sipena_offline_crud')) || [];
+        } catch {
+            queue = [];
+        }
+
+        if (queue.length === 0) {
+            if (callback) callback();
+            return;
+        }
+
+        isSyncingOffline = true;
+        console.log(`Menyinkronkan ${queue.length} aksi CRUD offline ke Google Sheets...`);
+        let promiseChain = Promise.resolve();
+        let syncedCount = 0;
+
+        queue.forEach((payload, index) => {
+            promiseChain = promiseChain.then(() => {
+                return fetch(WEB_APP_URL, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    body: JSON.stringify(payload)
+                }).then(() => {
+                    syncedCount++;
+                    dequeueOfflineCrud();
+                });
+            });
+        });
+
+        promiseChain.then(() => {
+            isSyncingOffline = false;
+            if (syncedCount > 0) {
+                const elapsed = Date.now() - lastToastTime;
+                const delay = Math.max(0, 1800 - elapsed);
+                setTimeout(() => {
+                    showToast(`🔄 Berhasil sinkron ${syncedCount} data offline ke Google Sheets!`);
+                }, delay);
+            }
+            if (callback) callback();
+        }).catch(err => {
+            isSyncingOffline = false;
+            console.error("Gagal sinkron aksi offline input:", err);
+            if (callback) callback();
+        });
+    }
+
+    // Form Elements
     const form = document.getElementById('productionForm');
-    const selectPenyadap = document.getElementById('nama_penyadap');
+    const selectBkph = document.getElementById('bkph');
+    const selectRph = document.getElementById('rph');
+    const selectTpg = document.getElementById('tpg');
     const selectPetak = document.getElementById('petak');
+    const selectPenyadap = document.getElementById('nama_penyadap');
 
     const inputKondisi = document.getElementById('kondisi_lapangan');
     const inputKendala = document.getElementById('kendala');
@@ -42,129 +128,235 @@ document.addEventListener('DOMContentLoaded', function () {
     const newPenyadapNameInput = document.getElementById('new_penyadap_name');
     const newPetakNameInput = document.getElementById('new_petak_name');
 
-    // Helper to load Penyadap list
-    function getPenyadapList() {
+    // Active Mandor context
+    let activeMandorId = null;
+
+    // Helper functions for LocalStorage Data Retrieval with Fallbacks
+    function getList(key, defaultData) {
         try {
-            const list = JSON.parse(localStorage.getItem('sipena_penyadap'));
-            if (list && list.length) return list;
-        } catch(e) {}
-        
-        if (!WEB_APP_URL) {
-            return [
-                { id: 'p1', nama: 'Slamet',  petak: 'P.01', status: 'Aktif', pohon: 800 },
-                { id: 'p2', nama: 'Budi',    petak: 'P.02', status: 'Aktif', pohon: 1000 },
-                { id: 'p3', nama: 'Sukijo',  petak: 'P.03', status: 'Aktif', pohon: 700 },
-                { id: 'p4', nama: 'Tukimin', petak: 'P.04', status: 'Aktif', pohon: 900 },
-                { id: 'p5', nama: 'Wawan',   petak: 'P.05', status: 'Aktif', pohon: 800 },
-                { id: 'p6', nama: 'Kardi',   petak: 'P.06', status: 'Aktif', pohon: 950 },
-            ];
-        }
-        return [];
+            const val = localStorage.getItem(key);
+            if (val) return JSON.parse(val);
+        } catch (e) { }
+        return defaultData;
     }
 
-    // Helper to load Petak list
+    function getBkphList() {
+        return getList('sipena_bkph', [
+            { id_bkph: 'b1', kode_bkph: 'BKPH-BTR', nama_bkph: 'BKPH Bantarkawung', status: 'Aktif' }
+        ]);
+    }
+
+    function getRphList() {
+        return getList('sipena_rph', [
+            { id_rph: 'r1', kode_rph: 'RPH-CKN', nama_rph: 'RPH Cikuning', id_bkph: 'b1', status: 'Aktif' },
+            { id_rph: 'r2', kode_rph: 'RPH-TBS', nama_rph: 'RPH TB. Serang', id_bkph: 'b1', status: 'Aktif' },
+            { id_rph: 'r3', kode_rph: 'RPH-TLG', nama_rph: 'RPH Telaga', id_bkph: 'b1', status: 'Aktif' },
+            { id_rph: 'r4', kode_rph: 'RPH-BJS', nama_rph: 'RPH Banjarsari', id_bkph: 'b1', status: 'Aktif' },
+            { id_rph: 'r5', kode_rph: 'RPH-KNS', nama_rph: 'RPH Kalinusu', id_bkph: 'b1', status: 'Aktif' }
+        ]);
+    }
+
+    function getTpgList() {
+        return getList('sipena_tpg', [
+            { id_tpg: 't1', kode_tpg: 'TPG-CKN', nama_tpg: 'Cikuning', id_rph: 'r1', status: 'Aktif' },
+            { id_tpg: 't2', kode_tpg: 'TPG-TRL', nama_tpg: 'Terlaya', id_rph: 'r1', status: 'Aktif' },
+            { id_tpg: 't3', kode_tpg: 'TPG-JPG', nama_tpg: 'Jipang', id_rph: 'r1', status: 'Aktif' },
+            { id_tpg: 't4', kode_tpg: 'TPG-BBY', nama_tpg: 'Bangbayang', id_rph: 'r1', status: 'Aktif' },
+            { id_tpg: 't5', kode_tpg: 'TPG-MYN', nama_tpg: 'Mayana', id_rph: 'r1', status: 'Aktif' },
+            { id_tpg: 't6', kode_tpg: 'TPG-LGK', nama_tpg: 'Legok', id_rph: 'r2', status: 'Aktif' },
+            { id_tpg: 't7', kode_tpg: 'TPG-CKG', nama_tpg: 'Cukanggaleh', id_rph: 'r2', status: 'Aktif' },
+            { id_tpg: 't8', kode_tpg: 'TPG-BTR', nama_tpg: 'Bantarkawung', id_rph: 'r2', status: 'Aktif' },
+            { id_tpg: 't9', kode_tpg: 'TPG-SMD', nama_tpg: 'Samudra', id_rph: 'r2', status: 'Aktif' },
+            { id_tpg: 't10', kode_tpg: 'TPG-TGG', nama_tpg: 'Tegongan', id_rph: 'r2', status: 'Aktif' },
+            { id_tpg: 't11', kode_tpg: 'TPG-LMN', nama_tpg: 'Lemahngebul', id_rph: 'r2', status: 'Aktif' },
+            { id_tpg: 't12', kode_tpg: 'TPG-PRS', nama_tpg: 'Parasi', id_rph: 'r3', status: 'Aktif' },
+            { id_tpg: 't13', kode_tpg: 'TPG-TNJ', nama_tpg: 'Tanjung', id_rph: 'r3', status: 'Aktif' },
+            { id_tpg: 't14', kode_tpg: 'TPG-BJS', nama_tpg: 'Banjarsari', id_rph: 'r4', status: 'Aktif' },
+            { id_tpg: 't15', kode_tpg: 'TPG-KLJ', nama_tpg: 'Kalijurang', id_rph: 'r5', status: 'Aktif' },
+            { id_tpg: 't16', kode_tpg: 'TPG-KRD', nama_tpg: 'Karangdempul', id_rph: 'r5', status: 'Aktif' },
+            { id_tpg: 't17', kode_tpg: 'TPG-HLR', nama_tpg: 'Hilir', id_rph: 'r5', status: 'Aktif' }
+        ]);
+    }
+
     function getPetakList() {
-        try {
-            const list = JSON.parse(localStorage.getItem('sipena_petak'));
-            if (list && list.length) return list;
-        } catch(e) {}
-        
-        if (!WEB_APP_URL) {
-            return [
-                { id: 'b1', kode: 'P.01', luas: 12.5, pohon: 1200 },
-                { id: 'b2', kode: 'P.02', luas: 15.0, pohon: 1500 },
-                { id: 'b3', kode: 'P.03', luas: 10.0, pohon: 1000 },
-                { id: 'b4', kode: 'P.04', luas: 13.0, pohon: 1300 },
-                { id: 'b5', kode: 'P.05', luas: 11.5, pohon: 1100 },
-                { id: 'b6', kode: 'P.06', luas: 14.0, pohon: 1400 },
-            ];
-        }
-        return [];
+        return getList('sipena_petak', [
+            { id: 'b1', id_petak: 'b1', kode: 'P.01', nomor_petak: 'P.01', anak_petak: '', luas: 12.5, id_tpg: 't1', pohon: 1200, status: 'Aktif' },
+            { id: 'b2', id_petak: 'b2', kode: 'P.02', nomor_petak: 'P.02', anak_petak: '', luas: 15.0, id_tpg: 't6', pohon: 1500, status: 'Aktif' },
+            { id: 'b3', id_petak: 'b3', kode: 'P.03', nomor_petak: 'P.03', anak_petak: '', luas: 10.0, id_tpg: 't12', pohon: 1000, status: 'Aktif' },
+            { id: 'b4', id_petak: 'b4', kode: 'P.04', nomor_petak: 'P.04', anak_petak: '', luas: 13.0, id_tpg: 't14', pohon: 1300, status: 'Aktif' },
+            { id: 'b5', id_petak: 'b5', kode: 'P.05', nomor_petak: 'P.05', anak_petak: '', luas: 11.5, id_tpg: 't15', pohon: 1100, status: 'Aktif' },
+            { id: 'b6', id_petak: 'b6', kode: 'P.06', nomor_petak: 'P.06', anak_petak: '', luas: 14.0, id_tpg: 't2', pohon: 1400, status: 'Aktif' }
+        ]);
     }
 
-    function getSupervisedPetaks() {
-        try {
-            const mandorList = JSON.parse(localStorage.getItem('sipena_mandor')) || [];
-            const activeMandorId = localStorage.getItem('sipena_active_mandor') || 'm1';
-            const activeM = mandorList.find(m => m.id === activeMandorId) || mandorList[0];
-            return activeM ? (activeM.petak || []) : [];
-        } catch(e) {
-            return [];
-        }
+    function getPenyadapList() {
+        return getList('sipena_penyadap', [
+            { id: 'p1', id_penyadap: 'p1', nama: 'Slamet', nama_penyadap: 'Slamet', petak: 'P.01', id_petak: 'b1', id_mandor: 'm1', status: 'Aktif', pohon: 800 },
+            { id: 'p2', id_penyadap: 'p2', nama: 'Budi', nama_penyadap: 'Budi', petak: 'P.02', id_petak: 'b2', id_mandor: 'm2', status: 'Aktif', pohon: 1000 },
+            { id: 'p3', id_penyadap: 'p3', nama: 'Sukijo', nama_penyadap: 'Sukijo', petak: 'P.03', id_petak: 'b3', id_mandor: 'm1', status: 'Aktif', pohon: 700 },
+            { id: 'p4', id_penyadap: 'p4', nama: 'Tukimin', nama_penyadap: 'Tukimin', petak: 'P.02', id_petak: 'b2', id_mandor: 'm2', status: 'Aktif', pohon: 900 },
+            { id: 'p5', id_penyadap: 'p5', nama: 'Wawan', nama_penyadap: 'Wawan', petak: 'P.05', id_petak: 'b5', id_mandor: 'm3', status: 'Aktif', pohon: 800 },
+            { id: 'p6', id_penyadap: 'p6', nama: 'Kardi', nama_penyadap: 'Kardi', petak: 'P.06', id_petak: 'b6', id_mandor: 'm3', status: 'Aktif', pohon: 950 }
+        ]);
     }
 
-    // 1. Fetch options and populate selects
+    function getMandorList() {
+        return getList('sipena_mandor', [
+            { id: 'm1', id_mandor: 'm1', nama: 'Mandor Wawan', nama_mandor: 'Mandor Wawan', nik: '001', nomor_hp: '08123456789', id_tpg: 't1', petak: ['P.01', 'P.03'], status: 'Aktif' },
+            { id: 'm2', id_mandor: 'm2', nama: 'Mandor Budi', nama_mandor: 'Mandor Budi', nik: '002', nomor_hp: '08123456780', id_tpg: 't6', petak: ['P.02', 'P.04'], status: 'Aktif' },
+            { id: 'm3', id_mandor: 'm3', nama: 'Mandor Kardi', nama_mandor: 'Mandor Kardi', nik: '003', nomor_hp: '08123456781', id_tpg: 't15', petak: ['P.05', 'P.06'], status: 'Aktif' }
+        ]);
+    }
+
+    // Dynamic Populator of Select Items
+    function populateSelect(selectEl, data, valueKey, labelKey, placeholder) {
+        selectEl.innerHTML = `<option value="" disabled selected>${placeholder}</option>`;
+        data.forEach(item => {
+            const opt = document.createElement('option');
+            opt.value = item[valueKey];
+            opt.textContent = item[labelKey];
+            selectEl.appendChild(opt);
+        });
+        selectEl.disabled = data.length === 0;
+    }
+
+    // Core Cascading Select System
+    function initCascadingSelects() {
+        const bkphList = getBkphList().filter(x => x.status === 'Aktif');
+        populateSelect(selectBkph, bkphList, 'id_bkph', 'nama_bkph', '-- Pilih BKPH --');
+
+        // BKPH change handler
+        selectBkph.addEventListener('change', function () {
+            const bkphId = this.value;
+            const rphList = getRphList().filter(x => x.id_bkph === bkphId && x.status === 'Aktif');
+            populateSelect(selectRph, rphList, 'id_rph', 'nama_rph', '-- Pilih RPH --');
+
+            // Clear children
+            selectTpg.innerHTML = '<option value="" disabled selected>-- Pilih TPG --</option>';
+            selectTpg.disabled = true;
+            selectPetak.innerHTML = '<option value="" disabled selected>-- Pilih Petak --</option>';
+            selectPetak.disabled = true;
+            selectPenyadap.innerHTML = '<option value="" disabled selected>-- Pilih Penyadap --</option>';
+            selectPenyadap.disabled = true;
+        });
+
+        // RPH change handler
+        selectRph.addEventListener('change', function () {
+            const rphId = this.value;
+            const tpgList = getTpgList().filter(x => x.id_rph === rphId && x.status === 'Aktif');
+            populateSelect(selectTpg, tpgList, 'id_tpg', 'nama_tpg', '-- Pilih TPG --');
+
+            // Clear children
+            selectPetak.innerHTML = '<option value="" disabled selected>-- Pilih Petak --</option>';
+            selectPetak.disabled = true;
+            selectPenyadap.innerHTML = '<option value="" disabled selected>-- Pilih Penyadap --</option>';
+            selectPenyadap.disabled = true;
+        });
+
+        // TPG change handler
+        selectTpg.addEventListener('change', function () {
+            const tpgId = this.value;
+            const petakList = getPetakList().filter(x => x.id_tpg === tpgId && x.status === 'Aktif');
+            populateSelect(selectPetak, petakList, 'id_petak', 'nomor_petak', '-- Pilih Petak --');
+
+            // Clear children
+            selectPenyadap.innerHTML = '<option value="" disabled selected>-- Pilih Penyadap --</option>';
+            selectPenyadap.disabled = true;
+        });
+
+        // Petak change handler
+        selectPetak.addEventListener('change', function () {
+            const petakId = this.value;
+            const penyadapList = getPenyadapList().filter(x => (x.id_petak === petakId || x.petak === getPetakCode(petakId)) && x.status === 'Aktif');
+            populateSelect(selectPenyadap, penyadapList, 'id_penyadap', 'nama_penyadap', '-- Pilih Penyadap --');
+        });
+    }
+
+    function getPetakCode(id) {
+        const p = getPetakList().find(x => x.id_petak === id);
+        return p ? (p.nomor_petak || p.kode) : '';
+    }
+
+    // Load initial context or fetch from Google Sheet Cloud
     function loadFormOptions() {
-        const supervised = getSupervisedPetaks();
-        const activeWorkers = getPenyadapList()
-            .filter(p => (p.status || 'Aktif') === 'Aktif' && (supervised.length === 0 || supervised.includes(p.petak)))
-            .map(p => p.nama);
-        const petakCodes = getPetakList()
-            .filter(b => supervised.length === 0 || supervised.includes(b.kode))
-            .map(b => b.kode);
+        initCascadingSelects();
 
-        let workers = [...activeWorkers];
-        let blocks = [...petakCodes];
+        if (!WEB_APP_URL) return;
 
-        if (!WEB_APP_URL) {
-            // Demo Mode: Populate with local lists
-            populateDropdown(selectPenyadap, arrayUnique(workers), '-- Pilih Penyadap --');
-            populateDropdown(selectPetak, arrayUnique(blocks), '-- Pilih Petak --');
-            return;
-        }
-
-        // Cloud Mode: Fetch all metadata from Google Sheets
+        // Cloud Mode: Fetch hierarchy lists from Google Sheets
         fetch(WEB_APP_URL)
             .then(res => res.json())
             .then(res => {
                 if (res.status === 'success') {
-                    if (res.penyadap && res.penyadap.length) {
-                        const cloudWorkers = res.penyadap
-                            .filter(p => (p.status || 'Aktif') === 'Aktif' && (supervised.length === 0 || supervised.includes(p.petak)))
-                            .map(p => p.nama);
-                        if (cloudWorkers.length > 0) workers = cloudWorkers;
-                    }
-                    if (res.petak && res.petak.length) {
-                        const cloudBlocks = res.petak
-                            .filter(b => supervised.length === 0 || supervised.includes(b.kode))
-                            .map(b => b.kode);
-                        if (cloudBlocks.length > 0) blocks = cloudBlocks;
+                    if (res.bkph && res.bkph.length) localStorage.setItem('sipena_bkph', JSON.stringify(res.bkph));
+                    if (res.rph && res.rph.length) localStorage.setItem('sipena_rph', JSON.stringify(res.rph));
+                    if (res.tpg && res.tpg.length) localStorage.setItem('sipena_tpg', JSON.stringify(res.tpg));
+                    if (res.petak && res.petak.length) localStorage.setItem('sipena_petak', JSON.stringify(res.petak));
+                    if (res.penyadap && res.penyadap.length) localStorage.setItem('sipena_penyadap', JSON.stringify(res.penyadap));
+                    if (res.mandor && res.mandor.length) localStorage.setItem('sipena_mandor', JSON.stringify(res.mandor));
+
+                    // Re-populate with fresh cloud data
+                    initCascadingSelects();
+
+                    // If active mandor is present, resolve context again
+                    if (activeMandorId) {
+                        applyActiveMandorContext(activeMandorId);
                     }
                 }
-
-                populateDropdown(selectPenyadap, arrayUnique(workers), '-- Pilih Penyadap --');
-                populateDropdown(selectPetak, arrayUnique(blocks), '-- Pilih Petak --');
             })
             .catch(err => {
-                console.warn("Gagal mengambil data dari Google Sheets, menggunakan fallback lokal:", err);
-                populateDropdown(selectPenyadap, arrayUnique(workers), '-- Pilih Penyadap --');
-                populateDropdown(selectPetak, arrayUnique(blocks), '-- Pilih Petak --');
+                console.warn("Gagal fetch metadata dari cloud, menggunakan local storage:", err);
             });
     }
 
-    function populateDropdown(selectElement, arrayItems, placeholder) {
-        const currentVal = selectElement.value;
-        selectElement.innerHTML = `<option value="" disabled>${placeholder}</option>`;
-        arrayItems.forEach(item => {
-            const opt = document.createElement('option');
-            opt.value = item;
-            opt.textContent = item;
-            selectElement.appendChild(opt);
-        });
-        if (currentVal && arrayItems.includes(currentVal)) {
-            selectElement.value = currentVal;
-        } else if (!currentVal) {
-            selectElement.selectedIndex = 0;
-        }
+    // Apply specific mandor view locking & context filters
+    function applyActiveMandorContext(mandorId) {
+        activeMandorId = mandorId;
+        const mandorList = getMandorList();
+        const activeM = mandorList.find(m => m.id === mandorId || m.id_mandor === mandorId);
+
+        if (!activeM) return;
+
+        const tpgId = activeM.id_tpg;
+        const tpgList = getTpgList();
+        const activeTpg = tpgList.find(t => t.id_tpg === tpgId);
+
+        if (!activeTpg) return;
+
+        const rphId = activeTpg.id_rph;
+        const rphList = getRphList();
+        const activeRph = rphList.find(r => r.id_rph === rphId);
+
+        if (!activeRph) return;
+
+        const bkphId = activeRph.id_bkph;
+        const bkphList = getBkphList();
+        const activeBkph = bkphList.find(b => b.id_bkph === bkphId);
+
+        if (!activeBkph) return;
+
+        // Auto-select and disable parent dropdowns to lock mandor view to their region
+        selectBkph.value = bkphId;
+        selectBkph.dispatchEvent(new Event('change'));
+
+        selectRph.value = rphId;
+        selectRph.dispatchEvent(new Event('change'));
+
+        selectTpg.value = tpgId;
+        selectTpg.dispatchEvent(new Event('change'));
+
+        // Lock select dropdowns
+        selectBkph.disabled = true;
+        selectRph.disabled = true;
+        selectTpg.disabled = true;
+
+        // Parent inputs can be styled to look locked
+        selectBkph.style.backgroundColor = '#edf2f7';
+        selectRph.style.backgroundColor = '#edf2f7';
+        selectTpg.style.backgroundColor = '#edf2f7';
     }
 
-    function arrayUnique(array) {
-        return array.filter((value, index, self) => self.indexOf(value) === index).sort();
-    }
-
-    loadFormOptions();
-
-    // 2. Add New Options dynamically via modals
+    // 2. Modals Inline Options adding
     btnAddPenyadap.addEventListener('click', () => modalPenyadap.classList.add('active'));
     btnAddPetak.addEventListener('click', () => modalPetak.classList.add('active'));
 
@@ -183,23 +375,44 @@ document.addEventListener('DOMContentLoaded', function () {
         const name = newPenyadapNameInput.value.trim();
         if (name) {
             const list = getPenyadapList();
-            const newPenyadap = {
+            const petakId = selectPetak.value;
+            if (!petakId) {
+                alert('Silakan pilih Petak terlebih dahulu di form!');
+                return;
+            }
+
+            const newP = {
                 id: 'p' + Date.now(),
+                id_penyadap: 'p' + Date.now(),
                 nama: name,
-                petak: selectPetak.value || 'P.01 - B.01',
+                nama_penyadap: name,
+                petak: getPetakCode(petakId),
+                id_petak: petakId,
+                id_mandor: activeMandorId || 'm1',
                 status: 'Aktif',
-                pohon: 800
+                pohon: 800,
+                luas: 1.5,
+                target: 120,
+                periode1: 10,
+                periode2: 10
             };
-            list.push(newPenyadap);
+            list.push(newP);
             localStorage.setItem('sipena_penyadap', JSON.stringify(list));
 
-            // Append and select
+            // Populate and select
             const opt = document.createElement('option');
-            opt.value = name;
+            opt.value = newP.id_penyadap;
             opt.textContent = name;
             selectPenyadap.appendChild(opt);
-            selectPenyadap.value = name;
+            selectPenyadap.value = newP.id_penyadap;
+            selectPenyadap.disabled = false;
             closeModal(modalPenyadap);
+
+            // Post metadata to cloud in background
+            queueOfflineCrud({ action: 'savePenyadap', data: newP });
+            if (navigator.onLine) {
+                syncOfflineCrud();
+            }
         } else {
             alert('Nama penyadap tidak boleh kosong!');
         }
@@ -209,22 +422,40 @@ document.addEventListener('DOMContentLoaded', function () {
         const block = newPetakNameInput.value.trim();
         if (block) {
             const list = getPetakList();
-            const newPetak = {
+            const tpgId = selectTpg.value;
+            if (!tpgId) {
+                alert('Silakan pilih TPG terlebih dahulu di form!');
+                return;
+            }
+
+            const newB = {
                 id: 'b' + Date.now(),
+                id_petak: 'b' + Date.now(),
                 kode: block,
-                luas: 10.0, // Default 10.0 Hectares
-                pohon: 1000
+                nomor_petak: block,
+                anak_petak: '',
+                luas: 10.0,
+                id_tpg: tpgId,
+                pohon: 1000,
+                status: 'Aktif'
             };
-            list.push(newPetak);
+            list.push(newB);
             localStorage.setItem('sipena_petak', JSON.stringify(list));
 
-            // Append and select
+            // Populate and select
             const opt = document.createElement('option');
-            opt.value = block;
+            opt.value = newB.id_petak;
             opt.textContent = block;
             selectPetak.appendChild(opt);
-            selectPetak.value = block;
+            selectPetak.value = newB.id_petak;
+            selectPetak.disabled = false;
             closeModal(modalPetak);
+
+            // Post metadata to cloud in background
+            queueOfflineCrud({ action: 'savePetak', data: newB });
+            if (navigator.onLine) {
+                syncOfflineCrud();
+            }
         } else {
             alert('Nomor petak tidak boleh kosong!');
         }
@@ -252,16 +483,39 @@ document.addEventListener('DOMContentLoaded', function () {
     form.addEventListener('submit', function (e) {
         e.preventDefault();
 
+        const pId = selectPenyadap.value;
+        const pObj = getPenyadapList().find(x => x.id_penyadap === pId);
+
+        const dateVal = document.getElementById('tanggal').value;
+        const pDate = new Date(dateVal);
+        const pNum = pDate.getDate() <= 15 ? 1 : 2;
+        const mNum = pDate.getMonth() + 1;
+        const yNum = pDate.getFullYear();
+
         const data = {
-            tanggal: document.getElementById('tanggal').value,
-            nama_penyadap: selectPenyadap.value,
-            petak: selectPetak.value,
+            id: 'c-' + Math.random().toString(36).substr(2, 9),
+            tanggal: dateVal,
+            periode: pNum,
+            bulan: mNum,
+            tahun: yNum,
+            id_bkph: selectBkph.value,
+            id_rph: selectRph.value,
+            id_tpg: selectTpg.value,
+            id_petak: selectPetak.value,
+            anak_petak: pObj ? (pObj.anak_petak || '') : '',
+            id_mandor: activeMandorId || (pObj ? pObj.id_mandor : 'm1'),
+            id_penyadap: pId,
+            nama_penyadap: pObj ? pObj.nama_penyadap : selectPenyadap.options[selectPenyadap.selectedIndex].text,
+            petak: getPetakCode(selectPetak.value),
             estimasi_hasil: parseFloat(document.getElementById('estimasi_hasil').value),
+            realisasi_produksi: parseFloat(document.getElementById('estimasi_hasil').value),
             kondisi_lapangan: inputKondisi.value,
-            kendala: inputKendala.value.trim()
+            kendala: inputKendala.value.trim(),
+            catatan: inputKendala.value.trim(),
+            timestamp: new Date().toISOString()
         };
 
-        if (!data.tanggal || !data.nama_penyadap || !data.petak || isNaN(data.estimasi_hasil)) {
+        if (!data.tanggal || !data.id_penyadap || !data.id_petak || isNaN(data.estimasi_hasil)) {
             showToast('⚠️ Mohon lengkapi semua field yang wajib!', true);
             return;
         }
@@ -270,10 +524,10 @@ document.addEventListener('DOMContentLoaded', function () {
         btnSubmit.textContent = 'Mengirim...';
 
         if (!WEB_APP_URL) {
-            // ================= DEMO MODE =================
+            // Demo mode saving
             saveEntryDemoMode(data);
         } else {
-            // ================= CLOUD MODE =================
+            // Sync / Offline Mode saving
             saveEntryOffline(data);
             if (navigator.onLine) {
                 syncOfflineEntries();
@@ -281,17 +535,10 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
-    // Demo mode: Save to local demo database array
+    // Demo Mode Local Save
     function saveEntryDemoMode(data) {
-        setTimeout(() => { // Simulate small network delay
-            // We append a custom field for ID and Timestamp to mimic Cloud behavior
-            data.id = 'demo-' + Math.random().toString(36).substr(2, 9);
-            data.timestamp = new Date().toISOString();
-
+        setTimeout(() => {
             let demoEntries = JSON.parse(localStorage.getItem('sipena_demo_entries')) || [];
-
-            // If local storage demo entries is empty, the dashboard will populate initial mock data.
-            // But we must push the new entry here:
             demoEntries.push(data);
             localStorage.setItem('sipena_demo_entries', JSON.stringify(demoEntries));
 
@@ -307,6 +554,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }, 600);
     }
 
+    // Offline Sync Database Save
     function saveEntryOffline(data) {
         let offlineEntries = [];
         try {
@@ -331,11 +579,28 @@ document.addEventListener('DOMContentLoaded', function () {
     function resetForm() {
         form.reset();
         document.getElementById('tanggal').value = new Date().toISOString().split('T')[0];
-        selectPenyadap.selectedIndex = 0;
-        selectPetak.selectedIndex = 0;
+
+        // Reset dropdown statuses
+        selectBkph.disabled = false;
+        selectRph.disabled = true;
+        selectTpg.disabled = true;
+        selectPetak.disabled = true;
+        selectPenyadap.disabled = true;
+
+        selectBkph.style.backgroundColor = '';
+        selectRph.style.backgroundColor = '';
+        selectTpg.style.backgroundColor = '';
+
         inputKondisi.value = 'Normal';
         inputKendala.value = '';
         inputKendala.placeholder = 'Isi kendala jika ada (contoh: Wadah bocor)';
+
+        // Load / context restoration
+        if (activeMandorId) {
+            applyActiveMandorContext(activeMandorId);
+        } else {
+            initCascadingSelects();
+        }
     }
 
     function showToast(message, isError = false) {
@@ -357,13 +622,15 @@ document.addEventListener('DOMContentLoaded', function () {
         }, 3500);
     }
 
-    // 5. Connection state monitoring
+    // 5. Connection State Handlers
     function updateOnlineStatus() {
         if (navigator.onLine) {
             bannerOffline.style.display = 'none';
             if (netStatusIcon) netStatusIcon.textContent = '📶 Online';
             if (WEB_APP_URL) {
-                syncOfflineEntries();
+                syncOfflineCrud(() => {
+                    syncOfflineEntries();
+                });
             }
         } else {
             bannerOffline.style.display = 'flex';
@@ -379,7 +646,7 @@ document.addEventListener('DOMContentLoaded', function () {
         try {
             let entries = JSON.parse(localStorage.getItem('sipena_offline_entries')) || [];
             if (entries.length > 0) {
-                entries.shift(); // Remove the first item
+                entries.shift();
                 localStorage.setItem('sipena_offline_entries', JSON.stringify(entries));
             }
         } catch (e) {
@@ -387,7 +654,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
-    // 6. Sync offline entries (Google Sheets)
+    // Sync Offline production submissions
     function syncOfflineEntries() {
         if (isSyncingEntries) {
             setTimeout(syncOfflineEntries, 1000);
@@ -414,7 +681,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 return fetch(WEB_APP_URL, {
                     method: 'POST',
                     mode: 'no-cors',
-                    body: JSON.stringify(item)
+                    body: JSON.stringify({ action: 'addTransaction', data: item })
                 })
                     .then(() => {
                         syncedCount++;
@@ -443,19 +710,23 @@ document.addEventListener('DOMContentLoaded', function () {
             if (window.parent && window.parent !== window) {
                 window.parent.postMessage({ type: 'SIPENA_SUBMIT_SUCCESS' }, '*');
             }
-            if (syncedCount > 0) {
-                const elapsed = Date.now() - lastToastTime;
-                const delay = Math.max(0, 1800 - elapsed);
-                setTimeout(() => {
-                    showToast(`🔄 Sebagian tersinkron (${syncedCount} data).`);
-                }, delay);
-            }
         });
     }
 
+    // Listen for parent context commands
     window.addEventListener('message', (e) => {
         if (e.data?.type === 'SIPENA_SET_ACTIVE_MANDOR') {
-            loadFormOptions();
+            const mandorId = e.data.mandorId;
+            applyActiveMandorContext(mandorId);
         }
     });
+
+    // Startup Initialization
+    loadFormOptions();
+
+    // Check if parent has mandor details in query params or localStorage
+    const savedMandorId = localStorage.getItem('sipena_logged_in_mandor');
+    if (savedMandorId) {
+        applyActiveMandorContext(savedMandorId);
+    }
 });
