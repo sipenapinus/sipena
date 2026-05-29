@@ -187,6 +187,21 @@ document.addEventListener('DOMContentLoaded', function () {
         return new Date().toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
     }
 
+    function getMandorPetakArray(m) {
+        if (!m) return [];
+        let val = m.petak;
+        if (!val && m.id_tpg) {
+            const petaks = getPetakList();
+            return petaks.filter(b => b.id_tpg === m.id_tpg).map(b => b.kode || b.nomor_petak);
+        }
+        if (!val) return [];
+        if (Array.isArray(val)) return val;
+        if (typeof val === 'string') {
+            return val.split(',').map(x => x.trim()).filter(Boolean);
+        }
+        return [];
+    }
+
     // ======================== HELPER: TOAST ========================
     let toastTimer = null;
     function showToast(msg, type = 'success') {
@@ -363,7 +378,9 @@ document.addEventListener('DOMContentLoaded', function () {
             case 'dashboard': renderDashboard(globalRecords); break;
             case 'pimpinan': renderPimpinan(globalRecords); break;
             case 'mandor': renderMandorTab(); break;
-            case 'petak-target': renderPetakTargetTable(); break;
+            case 'wilayah': renderWilayahTab(); break;
+            case 'penyadap': renderPenyadapTable(); break;
+            case 'user': renderUserTable(); break;
             case 'monitoring': renderMonitoringTab(); break;
             case 'peta-wilayah': renderMap(globalRecords); break;
             case 'laporan': renderReportTable(globalRecords); break;
@@ -673,9 +690,9 @@ document.addEventListener('DOMContentLoaded', function () {
         let supervisedPetaks = [];
 
         if (selectedMandorId !== 'all') {
-            activeMandorObj = mandorList.find(m => m.id === selectedMandorId);
+            activeMandorObj = mandorList.find(m => m.id === selectedMandorId || m.id_mandor === selectedMandorId);
             if (activeMandorObj) {
-                supervisedPetaks = activeMandorObj.petak || [];
+                supervisedPetaks = getMandorPetakArray(activeMandorObj);
             }
         }
 
@@ -735,7 +752,7 @@ document.addEventListener('DOMContentLoaded', function () {
             let html = '';
             if (selectedMandorId === 'all') {
                 mandorList.forEach(m => {
-                    const mPetaks = m.petak || [];
+                    const mPetaks = getMandorPetakArray(m);
                     const mPenyadaps = originalPenyadapList.filter(p => mPetaks.includes(p.petak));
                     const mPetakList = originalPetakList.filter(b => mPetaks.includes(b.kode));
 
@@ -804,7 +821,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 });
             } else {
                 if (activeMandorObj) {
-                    const mPetaks = activeMandorObj.petak || [];
+                    const mPetaks = getMandorPetakArray(activeMandorObj);
                     const mPenyadaps = originalPenyadapList.filter(p => mPetaks.includes(p.petak));
                     const mPetakList = originalPetakList.filter(b => mPetaks.includes(b.kode));
 
